@@ -141,7 +141,7 @@ class DeviceCommands:
         if protocol == const.PROTOCOL_DMAP:
             yield from self._pair_with_dmap_device()
         elif protocol == const.PROTOCOL_MRP:
-            raise exceptions.NotSupportedError()
+            yield from self._pair_with_mrp_device()
 
     @asyncio.coroutine
     def _pair_with_dmap_device(self):
@@ -171,6 +171,12 @@ class DeviceCommands:
 
         return 0
 
+    @asyncio.coroutine
+    def _pair_with_mrp_device(self):
+        # TODO: Dummy code here until pairing has been refactored
+        print("PROTOTYPE: Pair with MRP device")
+        yield from self.atv.pairing.start()
+        yield from self.atv.pairing.stop()
 
 class PushListener:
     """Internal listener for push updates."""
@@ -368,7 +374,8 @@ def _handle_commands(args, loop):
         details.add_service(MrpService(args.port))
 
     atv = pyatv.connect_to_apple_tv(details, loop, protocol=args.protocol)
-    atv.push_updater.listener = PushListener()
+    if not atv.push_updater:  # TODO: not implemented in MRP yet
+        atv.push_updater.listener = PushListener()
 
     try:
         if args.airplay_credentials is not None:
