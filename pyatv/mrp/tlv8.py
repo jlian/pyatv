@@ -19,6 +19,7 @@ TLV_SIGNATURE = '10'
 # Simple method to parse TLV data. If value is larger than 255 bytes, it is
 # split up in multiple chunks. So the same tag might occurr several times.
 def read_tlv(data):
+    """Parse TLV8 bytes into a dict."""
     def _parse(data, pos, size, result=None):
         if result is None:
             result = {}
@@ -39,6 +40,7 @@ def read_tlv(data):
 
 
 def write_tlv(data):
+    """Convert a dict to TLV8 bytes."""
     tlv = b''
     for key, value in data.items():
         tag = bytes([int(key)])

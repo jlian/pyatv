@@ -8,19 +8,21 @@
 # 3. Save the identifiers (public key, identifier, pairing, ltsk)
 # 4. Fill variables in run() with the saved identifiers
 # 5. Comment out call to pair(...) as that is no longer needed
+"""Prototype code for MRP."""
 
 import os
-import sys
 import binascii
 import uuid
 import asyncio
 import hashlib
 import curve25519
+import logging
 
-from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
-import pyatv.mrp.protobuf.DeviceInfoMessage_pb2 as DeviceInfoMessage
-import pyatv.mrp.protobuf.CryptoPairingMessage_pb2 as CryptoPairingMessage
-import pyatv.mrp.protobuf.ClientUpdatesConfigMessage_pb2 as ClientUpdatesConfigMessage
+from pyatv import exceptions
+from .protobuf import ProtocolMessage_pb2 as PB
+from .protobuf import DeviceInfoMessage_pb2 as DeviceInfoMessage
+from .protobuf import CryptoPairingMessage_pb2 as CryptoPairingMessage
+from .protobuf import ClientUpdatesConfigMessage_pb2 as ClientUpdates
 from pyatv.mrp.variant import (read_variant, write_variant)
 from pyatv.mrp import tlv8
 
@@ -28,13 +30,24 @@ from srptools import (SRPContext, SRPClientSession, constants)
 from tlslite.utils.chacha20_poly1305 import CHACHA20_POLY1305
 from ed25519.keys import SigningKey, VerifyingKey
 
+_LOGGER = logging.getLogger(__name__)
+
 PHONE_IDENTIFIER = '6fdad309-5331-47ff-b525-1158bb105af1'
+
+
+# Special log method to avoid hexlify conversion if debug is off
+def _log_debug(message, **kwargs):
+    if _LOGGER.isEnabledFor(logging.DEBUG):
+        output = ('{0}={1}'.format(k, binascii.hexlify(
+            bytearray(v)).decode()) for k, v in kwargs.items())
+        _LOGGER.debug('%s (%s)', message, ', '.join(output))
 
 
 # ------------------------------------------------------------------------------
 
 
-def hkdf_expand(salt, info, shared_key):
+def hkdf_expand(salt, info, shared_secret):
+    """Dervice encryption keys from shared secret."""
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.kdf.hkdf import HKDF
     from cryptography.hazmat.backends import default_backend
@@ -45,16 +58,19 @@ def hkdf_expand(salt, info, shared_key):
         info=info.encode(),
         backend=default_backend()
     )
-    return hkdf.derive(shared_key)
+    return hkdf.derive(shared_secret)
 
 
 # TODO: factories for messages are never a good idea, prefer builders
 class MessageFactory:
+    """Factory to create messages."""
 
     def __init__(self):
+        """Initialize a new MessageFactory."""
         self._session = str(uuid.uuid4()).upper()
 
     def make(self, type, priority=0, add_identifier=True):
+        """Create a new message."""
         message = PB.ProtocolMessage()
         message.type = type
         if add_identifier:
@@ -63,6 +79,7 @@ class MessageFactory:
         return message
 
     def crypto_pairing(self, tlv):
+        """Create a CryptoPairingMessage."""
         message = self.make(PB.ProtocolMessage.CRYPTO_PAIRING_MESSAGE)
         crypto = message.Extensions[CryptoPairingMessage.cryptoPairingMessage]
         crypto.status = 0
@@ -71,14 +88,17 @@ class MessageFactory:
 
 
 class Chacha20Cipher:
+    """CHACHA20 encryption/decryption layer."""
 
-    def __init__(self, in_key, out_key):
-        self._enc_in = CHACHA20_POLY1305(in_key, 'python')
+    def __init__(self, out_key, in_key):
+        """Initialize a new Chacha20Cipher."""
         self._enc_out = CHACHA20_POLY1305(out_key, 'python')
+        self._enc_in = CHACHA20_POLY1305(in_key, 'python')
         self._out_counter = 0
         self._in_counter = 0
 
     def encrypt(self, data, nounce=None):
+        """Encrypt data with counter or specified nounce."""
         if nounce is None:
             nounce = self._out_counter.to_bytes(length=8, byteorder='little')
             self._out_counter += 1
@@ -86,19 +106,28 @@ class Chacha20Cipher:
         return self._enc_out.seal(b'\x00\x00\x00\x00' + nounce, data, bytes())
 
     def decrypt(self, data, nounce=None):
+        """Decrypt data with counter or specified nounce."""
         if nounce is None:
             nounce = self._in_counter.to_bytes(length=8, byteorder='little')
             self._in_counter += 1
 
-        return self._enc_in.open(b'\x00\x00\x00\x00' + nounce, data, bytes())
+        decrypted = self._enc_in.open(
+            b'\x00\x00\x00\x00' + nounce, data, bytes())
+
+        if not decrypted:
+            raise Exception('data decrypt failed')  # TODO: new exception
+
+        return bytes(decrypted)
 
 
 # This is just a temporary hack to send and receive protobuf message. Will be
 # replaced with something that handles incoming data more async-friendly. Also,
 # use "real" logging later on.
 class TempNetwork:
+    """Network layer that encryptes/decryptes and (de)serializes messages."""
 
     def __init__(self, host, port, loop):
+        """Initialize a new TempNetwork."""
         self.host = str(host)  # TODO: which datatype do I want here?
         self.port = port
         self.loop = loop
@@ -107,74 +136,69 @@ class TempNetwork:
         self._writer = None
         self._chacha = None
 
-    def enable_encryption(self, c2a_key, a2c_key):
-        self._chacha = Chacha20Cipher(a2c_key, c2a_key) #, a2c_key)
+    def enable_encryption(self, output_key, input_key):
+        """Enable encryption with the specified keys."""
+        self._chacha = Chacha20Cipher(output_key, input_key)
 
     @asyncio.coroutine
     def connect(self):
+        """Connect to device."""
         self._reader, self._writer = yield from asyncio.open_connection(
             self.host, self.port, loop=self.loop)
 
     def close(self):
+        """Close connection to device."""
         self._writer.close()
 
     def send(self, message):
+        """Send message to device."""
         serialized = message.SerializeToString()
 
-        print('>> ({0}): '.format(len(serialized)) + ' '.join('{0:02X}'.format(i) for i in bytearray(serialized)))
+        _log_debug('>> Send', Data=serialized)
         if self._chacha:
             serialized = self._chacha.encrypt(serialized)
+            _log_debug('>> Send', Encrypted=serialized)
 
         data = write_variant(len(serialized)) + serialized
         self._writer.write(data)
-        print('>> ENCRYPTED ({0}): '.format(len(data)) + ' '.join('{0:02X}'.format(i) for i in bytearray(data)))
-        print('>> ' + str(message))
+        _LOGGER.debug('>> Send: Protobuf=%s', message)
 
     @asyncio.coroutine
     def receive(self):
-        data = yield from self._reader.read(2048)
-        if data == b'':  # TODO: handle better
-            print("connection closed")
+        """Receive message from device."""
+        data = yield from self._reader.read(1024)
+        if data == b'':
+            _LOGGER.debug('Device closed the connection')
             return b''
 
+        # A message might be split over several reads, so we store a buffer and
+        # try to decode messages from that buffer
         self._buffer += data
-        print('<< ({0}): '.format(len(data)) + ' '.join('{0:02X}'.format(i) for i in bytearray(data)))
-
-        length, raw = read_variant(self._buffer)
+        _log_debug('<< Receive', Data=data)
 
         # The variant tells us how much data must follow
+        length, raw = read_variant(self._buffer)
         if len(raw) < length:
-            print('require {0} bytes to decode, only have {1}'.format(length, len(raw)))
+            _LOGGER.debug(
+                'Require %d bytes but only %d in buffer', length, len(raw))
             return None
 
         data = raw[:length]  # Incoming message (might be encrypted)
         self._buffer = raw[length:]  # Buffer, might contain more messages
 
         if self._chacha:
-            data = self._chacha.decrypt(data)  # TODO: not tested (concept)
-            if not data:
-                print("failed to decrypt")
-                sys.exit(1)
-            data = bytes(data)
-            print('<< DECRYPTED ({0}): '.format(len(data)) + ' '.join('{0:02X}'.format(i) for i in bytearray(data)))
+            data = self._chacha.decrypt(data)
+            _log_debug('<< Receive', Decrypted=data)
 
-        print(data)
         parsed = PB.ProtocolMessage()
         parsed.ParseFromString(data)
-        print('<< ' + str(parsed))
+        _LOGGER.debug('<< Receive: Protobuf=%s', parsed)
         return parsed
-
-# ------------------------------------------------------------------------------
-
-# Helper method for now...
-def pretty(name, value):
-    print('{0}: {1} (len: {2})'.format(
-            name, binascii.hexlify(bytearray(value)), len(value)))
 
 
 @asyncio.coroutine
 def device_information(net):
-    print('Getting device information...')
+    """Exchange device information messages."""
     message = MessageFactory().make(PB.ProtocolMessage.DEVICE_INFO_MESSAGE)
     info = message.Extensions[DeviceInfoMessage.deviceInfoMessage]
     info.uniqueIdentifier = PHONE_IDENTIFIER
@@ -186,14 +210,12 @@ def device_information(net):
     info.protocolVersion = 1
 
     net.send(message)
-    device_info = yield from net.receive()
-    print('Device information: {0}'.format(device_info))
+    yield from net.receive()
 
 
 @asyncio.coroutine
 def pair(net, factory, pairing_id):
-    print('Initiate pairing process...')
-
+    """Start pairing with device."""
     srp_signing_key = SigningKey(os.urandom(32))
     srp_verifying_key = srp_signing_key.get_verifying_key()
     srp_auth_private = srp_signing_key.to_seed()
@@ -205,11 +227,13 @@ def pair(net, factory, pairing_id):
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    pairing_data = tlv8.read_tlv(
+        resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
 
     if tlv8.TLV_BACK_OFF in pairing_data:
-        print('Retry in {}s'.format(int.from_bytes(pairing_data[TLV_BACK_OFF], byteorder='big')))
-        sys.exit(1)
+        time = int.from_bytes(
+            pairing_data[tlv8.TLV_BACK_OFF], byteorder='big')
+        raise Exception('back off {0}s'.format(time))
 
     atv_salt = pairing_data[tlv8.TLV_SALT]
     atv_pub_key = pairing_data[tlv8.TLV_PUBLIC_KEY]
@@ -237,24 +261,22 @@ def pair(net, factory, pairing_id):
     client_session_key_proof = srp_session.key_proof
 
     if not srp_session.verify_proof(srp_session.key_proof_hash):
-        print('proofs do not match (mitm?)')
-        sys.exit(1)
+        raise exceptions.AuthenticationError('proofs do not match (mitm?)')
 
     pub_key = binascii.unhexlify(client_public)
     proof = binascii.unhexlify(client_session_key_proof)
-    pretty('LOCAL KEY: ', pub_key)
-    pretty('LOCAL PROOF: ', proof)
+    _log_debug('Client', Public=pub_key, Proof=proof)
 
-    print('Initiate pairing process...')
     tlv = tlv8.write_tlv({tlv8.TLV_SEQ_NO: b'\x03',
                           tlv8.TLV_PUBLIC_KEY: pub_key,
                           tlv8.TLV_PROOF: proof})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    pairing_data = tlv8.read_tlv(
+        resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     atv_proof = pairing_data[tlv8.TLV_PROOF]
-    pretty('ATV Proof', atv_proof)
+    _log_debug('Device', Proof=atv_proof)
 
     srp_session_key = binascii.unhexlify(client_session_key)
 
@@ -275,7 +297,7 @@ def pair(net, factory, pairing_id):
 
     chacha = Chacha20Cipher(session_key, session_key)
     encrypted_data = chacha.encrypt(tlv, nounce='PS-Msg05'.encode())
-    pretty('Encrypted data', encrypted_data)
+    _log_debug('Data', Encrypted=encrypted_data)
 
     # --------------------------------------------------
 
@@ -284,22 +306,24 @@ def pair(net, factory, pairing_id):
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    pairing_data = tlv8.read_tlv(
+        resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     encrypted_data = pairing_data[tlv8.TLV_ENCRYPTED_DATA]
 
-    decrypted_tlv_bytes = chacha.decrypt(encrypted_data, nounce='PS-Msg06'.encode())
+    decrypted_tlv_bytes = chacha.decrypt(
+        encrypted_data, nounce='PS-Msg06'.encode())
     if not decrypted_tlv_bytes:
-        print('Failed to decrypt')
-        sys.exit(1)
+        raise Exception('data decrypt failed')  # TODO: new exception
     decrypted_tlv = tlv8.read_tlv(decrypted_tlv_bytes)
-    print('DECRYPTED: {0}'.format(decrypted_tlv))
+    _LOGGER.debug('PS-Msg06: %s', decrypted_tlv)
 
     atv_identifier = decrypted_tlv[tlv8.TLV_IDENTIFIER]
     atv_signature = decrypted_tlv[tlv8.TLV_SIGNATURE]
     atv_pub_key = decrypted_tlv[tlv8.TLV_PUBLIC_KEY]
-    pretty('ATV identifier', atv_identifier)
-    pretty('ATV signature', atv_signature)
-    pretty('ATV public key', atv_pub_key)
+    _log_debug('Device',
+               Identifier=atv_identifier,
+               Signature=atv_signature,
+               Public=atv_pub_key)
 
     # TODO: verify signature here
 
@@ -308,8 +332,7 @@ def pair(net, factory, pairing_id):
 
 @asyncio.coroutine
 def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
-    print('Verifying stuff and generating keys...')
-
+    """Verify credentials and derive new session keys."""
     srp_verify_private = curve25519.Private(secret=os.urandom(32))
     srp_verify_public = srp_verify_private.get_public()
 
@@ -318,11 +341,11 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    resp = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    resp = tlv8.read_tlv(
+        resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     atv_session_pub_key = resp[tlv8.TLV_PUBLIC_KEY]
     atv_encrypted = resp[tlv8.TLV_ENCRYPTED_DATA]
-    pretty('ATV Public key', atv_pub_key)
-    pretty('ATV Encrypted',  atv_encrypted)
+    _log_debug('Device', Public=atv_pub_key, Encrypted=atv_encrypted)
 
     public = curve25519.Public(atv_session_pub_key)
     shared = srp_verify_private.get_shared_key(
@@ -341,14 +364,15 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     signature = decrypted_tlv[tlv8.TLV_SIGNATURE]
 
     if identifier != atv_identifier:
-        print('Not correct device')
-        sys.exit(1)
+        raise Exception('incorrect device response')  # TODO: new exception
 
-    info = atv_session_pub_key + bytes(identifier) + srp_verify_public.serialize()
+    info = atv_session_pub_key + \
+        bytes(identifier) + srp_verify_public.serialize()
     ltpk = VerifyingKey(bytes(atv_pub_key))
     ltpk.verify(bytes(signature), bytes(info))  # throws exception if no match
 
-    device_info = srp_verify_public.serialize() + pairing_id + atv_session_pub_key
+    device_info = srp_verify_public.serialize() + \
+        pairing_id + atv_session_pub_key
 
     signer = SigningKey(ltsk)
     device_signature = signer.sign(device_info)
@@ -366,41 +390,45 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+#     pairing_data = tlv8.read_tlv(
+#         resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     # TODO: check status code
 
-    controller_to_accessory_key = hkdf_expand('MediaRemote-Salt',
-                                              'MediaRemote-Write-Encryption-Key',
-                                              shared)
+    output_key = hkdf_expand('MediaRemote-Salt',
+                             'MediaRemote-Write-Encryption-Key',
+                             shared)
 
-    accessory_to_controller_key = hkdf_expand('MediaRemote-Salt',
-                                              'MediaRemote-Read-Encryption-Key',
-                                              shared)
+    input_key = hkdf_expand('MediaRemote-Salt',
+                            'MediaRemote-Read-Encryption-Key',
+                            shared)
 
-    pretty('CONTR->ACCES', controller_to_accessory_key)  # outputKey?
-    pretty('ACCES->CONTR', accessory_to_controller_key)  # inputKey?
+    _log_debug('Keys', Output=output_key, Input=input_key)
 
-    return controller_to_accessory_key, accessory_to_controller_key
+    return output_key, input_key
 
 
 # Send some messages and try stuff out here...
 @asyncio.coroutine
 def send_messages(net, factory):
-    print('Send some messages...')
-
-#     message = factory.make(PB.ProtocolMessage.UNKNOWN_1, add_identifier=False)
+    """Send some messages and try things out."""
+#     message = factory.make(
+#         PB.ProtocolMessage.UNKNOWN_1, add_identifier=False)
 #     message.temp.state = 2
 #     net.send(message)
 
-    message = factory.make(PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE, add_identifier=False)
-    config = message.Extensions[ClientUpdatesConfigMessage.clientUpdatesConfigMessage]
+    message = factory.make(
+        PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE,
+        add_identifier=False)
+    config = message.Extensions[ClientUpdates.clientUpdatesConfigMessage]
     config.artworkUpdates = True
     config.nowPlayingUpdates = True
     config.volumeUpdates = True
     config.keyboardUpdates = True
     net.send(message)
 
-#     message = factory.make(PB.ProtocolMessage.GET_KEYBOARD_SESSION_MESSAGE, add_identifier=True)
+#     message = factory.make(
+#         PB.ProtocolMessage.GET_KEYBOARD_SESSION_MESSAGE,
+#         add_identifier=True)
 #     message.keyboardSessionMessage.getKeyboardSessionMessage = "";
 #     net.send(message)
 

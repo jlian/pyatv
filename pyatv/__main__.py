@@ -178,6 +178,7 @@ class DeviceCommands:
         yield from self.atv.pairing.start()
         yield from self.atv.pairing.stop()
 
+
 class PushListener:
     """Internal listener for push updates."""
 

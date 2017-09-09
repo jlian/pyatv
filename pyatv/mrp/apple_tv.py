@@ -3,6 +3,7 @@
 import logging
 import asyncio
 
+from pyatv import exceptions
 from pyatv.mrp import prototype
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
                              Playing, PushUpdater)
@@ -40,7 +41,7 @@ class MrpPairingHandler(object):
     """Base class for API used to pair with an Apple TV."""
 
     def __init__(self, loop, address, port):
-        print("address: {0}, port: {1}".format(address, port))
+        """Initialize a new MrpPairingHandler."""
         self.factory = prototype.MessageFactory()
         self.net = prototype.TempNetwork(address, port, loop)
         self.pairing_id = '6fdad309-5331-47ff-b525-1158bb105af1'.encode()
@@ -66,9 +67,6 @@ class MrpPairingHandler(object):
         self.atv_pub_key = atv_pub_key
         self.atv_identifier = atv_identifier
         self.ltsk = ltsk
-        print("PUB KEY: {0}\nID: {1}\nLTSK: {2}\nPairing ID: {3}".format(
-                self.atv_pub_key, self.atv_identifier,
-                self.ltsk, self.pairing_id))
 
     @asyncio.coroutine
     def stop(self, **kwargs):
@@ -80,14 +78,16 @@ class MrpPairingHandler(object):
         self.net.enable_encryption(c2a_key, a2c_key)
 
         # Dummy code where messages can be sent when testing
-        yield from self.send_messages()
+        yield from self._send_messages()
 
     @asyncio.coroutine
-    def send_messages(self):
-        from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
-        import pyatv.mrp.protobuf.ClientUpdatesConfigMessage_pb2 as ClientUpdatesConfigMessage
-        message = self.factory.make(PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE, add_identifier=False)
-        config = message.Extensions[ClientUpdatesConfigMessage.clientUpdatesConfigMessage]
+    def _send_messages(self):
+        from .protobuf import ProtocolMessage_pb2 as PB
+        from .protobuf import ClientUpdatesConfigMessage_pb2 as ClientUpdates
+        message = self.factory.make(
+            PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE,
+            add_identifier=False)
+        config = message.Extensions[ClientUpdates.clientUpdatesConfigMessage]
         config.artworkUpdates = True
         config.nowPlayingUpdates = True
         config.volumeUpdates = True

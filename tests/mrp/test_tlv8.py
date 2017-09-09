@@ -2,12 +2,15 @@
 
 import unittest
 
+from collections import OrderedDict
 from pyatv.mrp.tlv8 import (read_tlv, write_tlv)
 
 SINGLE_KEY_IN = {'10': b'123'}
 SINGLE_KEY_OUT = b'\x0a\x03\x31\x32\x33'
 
-DOUBLE_KEY_IN = {'1': b'111', '4': b'222'}
+# Use OrderedDict as a regular dict might get keys in different order every
+# run, making the output not match
+DOUBLE_KEY_IN = OrderedDict([('1', b'111'), ('4', b'222')])
 DOUBLE_KEY_OUT = b'\x01\x03\x31\x31\x31\x04\x03\x32\x32\x32'
 
 LARGE_KEY_IN = {'2': b'\x31'*256}
