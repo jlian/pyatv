@@ -1,5 +1,6 @@
 [MASTER]
 reports=no
+ignore=pyatv/mrp/protobuf
 
 disable=
   locally-disabled,

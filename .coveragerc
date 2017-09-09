@@ -3,6 +3,7 @@ source = pyatv
 
 omit =
     pyatv/__main__.py
+    pyatv/mrp/protobuf/*.py
 
 [report]
 # Regexes for lines to exclude from consideration
