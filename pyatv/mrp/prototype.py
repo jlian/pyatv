@@ -14,7 +14,6 @@ import sys
 import binascii
 import uuid
 import asyncio
-import hkdf
 import hashlib
 import curve25519
 
@@ -22,6 +21,7 @@ from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
 import pyatv.mrp.protobuf.DeviceInfoMessage_pb2 as DeviceInfoMessage
 import pyatv.mrp.protobuf.CryptoPairingMessage_pb2 as CryptoPairingMessage
 import pyatv.mrp.protobuf.ClientUpdatesConfigMessage_pb2 as ClientUpdatesConfigMessage
+from pyatv.mrp.variant import read_variant, write_variant
 
 from srptools import (SRPContext, SRPClientSession, constants)
 from tlslite.utils.chacha20_poly1305 import CHACHA20_POLY1305
@@ -34,28 +34,19 @@ PHONE_IDENTIFIER = '6fdad309-5331-47ff-b525-1158bb105af1'
 
 # ------------------------------------------------------------------------------
 
-# This should be one moduler later
 
-def read_variant(variant):
-    """Read and parse a binary protobuf variant value."""
-    result = 0
-    cnt = 0
-    for b in variant:
-        result |= (b & 0x7f) << (7 * cnt)
-        cnt += 1
-        if not (b & 0x80):
-            return result, variant[cnt:]
-    raise Exception('invalid variant')
-
-
-def write_variant(number):
-    """Convert an integer to a protobuf variant binary buffer."""
-    if number < 128:
-        return bytes([number])
-    return bytes([(number & 0x7f) | 0x80]) + write_variant(number >> 7)
-
-
-# ------------------------------------------------------------------------------
+def hkdf_expand(salt, info, shared_key):
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    from cryptography.hazmat.backends import default_backend
+    hkdf = HKDF(
+        algorithm=hashes.SHA512(),
+        length=32,
+        salt=salt.encode(),
+        info=info.encode(),
+        backend=default_backend()
+    )
+    return hkdf.derive(shared_key)
 
 
 # TODO: factories for messages are never a good idea, prefer builders
@@ -362,13 +353,13 @@ def pair(net, factory, pairing_id):
 
     srp_session_key = binascii.unhexlify(client_session_key)
 
-    hkdf_inst = hkdf.Hkdf('Pair-Setup-Controller-Sign-Salt'.encode(),
-                          srp_session_key, hash=hashlib.sha512)
-    ios_device_x = hkdf_inst.expand('Pair-Setup-Controller-Sign-Info'.encode(), 32)
+    ios_device_x = hkdf_expand('Pair-Setup-Controller-Sign-Salt',
+                               'Pair-Setup-Controller-Sign-Info',
+                               srp_session_key)
 
-    hkdf_inst = hkdf.Hkdf('Pair-Setup-Encrypt-Salt'.encode(),
-                          srp_session_key, hash=hashlib.sha512)
-    session_key = hkdf_inst.expand('Pair-Setup-Encrypt-Info'.encode(), 32)
+    session_key = hkdf_expand('Pair-Setup-Encrypt-Salt',
+                              'Pair-Setup-Encrypt-Info',
+                              srp_session_key)
 
     device_info = ios_device_x + pairing_id + srp_auth_public
     device_signature = srp_signing_key.sign(device_info)
@@ -430,9 +421,9 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     shared = srp_verify_private.get_shared_key(
         public, hashfunc=lambda x: x)  # No additional hashing used
 
-    hkdf_inst = hkdf.Hkdf('Pair-Verify-Encrypt-Salt'.encode(),
-                          shared, hash=hashlib.sha512)
-    session_key = hkdf_inst.expand('Pair-Verify-Encrypt-Info'.encode(), 32)
+    session_key = hkdf_expand('Pair-Verify-Encrypt-Salt',
+                              'Pair-Verify-Encrypt-Info',
+                              shared)
 
     chacha = Chacha20Cipher(session_key, session_key)
     decrypted = chacha.decrypt(atv_encrypted, nounce='PV-Msg02'.encode())
@@ -469,11 +460,13 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     pairing_data = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     # TODO: check status code
 
-    hkdf_inst = hkdf.Hkdf('MediaRemote-Salt'.encode(), shared, hash=hashlib.sha512)
-    controller_to_accessory_key = hkdf_inst.expand('MediaRemote-Write-Encryption-Key'.encode(), 32)
+    controller_to_accessory_key = hkdf_expand('MediaRemote-Salt',
+                                              'MediaRemote-Write-Encryption-Key',
+                                              shared)
 
-    hkdf_inst = hkdf.Hkdf('MediaRemote-Salt'.encode(), shared, hash=hashlib.sha512)
-    accessory_to_controller_key = hkdf_inst.expand('MediaRemote-Read-Encryption-Key'.encode(), 32)
+    accessory_to_controller_key = hkdf_expand('MediaRemote-Salt',
+                                              'MediaRemote-Read-Encryption-Key',
+                                              shared)
 
     pretty('CONTR->ACCES', controller_to_accessory_key)  # outputKey?
     pretty('ACCES->CONTR', accessory_to_controller_key)  # inputKey?

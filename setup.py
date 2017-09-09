@@ -32,7 +32,6 @@ setup(
         'cryptography>=1.8.1',
         'curve25519-donna>=1.3, <2',
         'ed25519>=1.4, <2',
-        'hkdf>=0.0.3',
         'protobuf>=3.4.0',
         'srptools>=0.2.0',
         'tlslite-ng>=0.7.0',
