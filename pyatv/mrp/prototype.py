@@ -21,14 +21,13 @@ from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
 import pyatv.mrp.protobuf.DeviceInfoMessage_pb2 as DeviceInfoMessage
 import pyatv.mrp.protobuf.CryptoPairingMessage_pb2 as CryptoPairingMessage
 import pyatv.mrp.protobuf.ClientUpdatesConfigMessage_pb2 as ClientUpdatesConfigMessage
-from pyatv.mrp.variant import read_variant, write_variant
+from pyatv.mrp.variant import (read_variant, write_variant)
+from pyatv.mrp import tlv8
 
 from srptools import (SRPContext, SRPClientSession, constants)
 from tlslite.utils.chacha20_poly1305 import CHACHA20_POLY1305
 from ed25519.keys import SigningKey, VerifyingKey
 
-PORT = 51163 # Random each time simulator is started, should be discovered with zeroconf
-HOST = '127.0.0.1'
 PHONE_IDENTIFIER = '6fdad309-5331-47ff-b525-1158bb105af1'
 
 
@@ -109,13 +108,10 @@ class TempNetwork:
         self._chacha = None
 
     def enable_encryption(self, c2a_key, a2c_key):
-        # TODO: not sure which key is which here...
         self._chacha = Chacha20Cipher(a2c_key, c2a_key) #, a2c_key)
 
     @asyncio.coroutine
     def connect(self):
-        print(str(self.host))
-        print(self.port)
         self._reader, self._writer = yield from asyncio.open_connection(
             self.host, self.port, loop=self.loop)
 
@@ -127,7 +123,6 @@ class TempNetwork:
 
         print('>> ({0}): '.format(len(serialized)) + ' '.join('{0:02X}'.format(i) for i in bytearray(serialized)))
         if self._chacha:
-            serialized = binascii.unhexlify(b'08112000b201020800')
             serialized = self._chacha.encrypt(serialized)
 
         data = write_variant(len(serialized)) + serialized
@@ -169,62 +164,6 @@ class TempNetwork:
         print('<< ' + str(parsed))
         return parsed
 
-
-# ------------------------------------------------------------------------------
-
-# This should be one module later
-
-# Simple method to parse TLV data. If value is larger than 255 bytes, it is
-# split up in multiple chunks. So the same tag might occurr several times.
-def parse_tlv(data):
-    def _parse(data, pos, size, result=None):
-        if result is None:
-            result = {}
-        if pos >= size:
-            return result
-
-        tag = str(data[pos])
-        len = data[pos+1]
-        value = data[pos+2:pos+2+len]
-
-        if tag in result:
-            result[tag] += value  # value > 255 is split up
-        else:
-            result[tag] = value
-        return _parse(data, pos+2+len, size, result)
-
-    return _parse(data, 0, len(data))
-
-
-def make_tlv(data):
-    tlv = b''
-    for key, value in data.items():
-        tag = bytes([int(key)])
-        length = len(value)
-        pos = 0
-
-        # A tag with length > 255 is added multiple times and concatenated into
-        # one buffer when reading the TLV again.
-        while pos < len(value):
-            size = min(length, 255)
-            tlv += tag
-            tlv += bytes([size])
-            tlv += value[pos:pos+size]
-            pos += size
-            length -= size
-    return tlv
-
-
-TLV_METHOD = '0'
-TLV_IDENTIFIER = '1'
-TLV_SALT = '2'
-TLV_PUBLIC_KEY = '3'
-TLV_PROOF = '4'
-TLV_ENCRYPTED_DATA = '5'
-TLV_SEQ_NO = '6'
-TLV_BACK_OFF = '8'  # Time before a new pairing process can be started
-TLV_SIGNATURE = '10'
-
 # ------------------------------------------------------------------------------
 
 # Helper method for now...
@@ -252,40 +191,6 @@ def device_information(net):
 
 
 @asyncio.coroutine
-def run(loop):
-    net = TempNetwork(HOST, PORT, loop)
-    yield from net.connect()
-
-#     factory = MessageFactory()
-#     pairing_id = PHONE_IDENTIFIER.encode()
-#     yield from device_information(net)
-
-
-#     atv_pub_key = binascii.unhexlify(b'c75a0a43e931e43a0c74da81b1388eef048bbaacdc0eec1a7e1a3bbb6e76daf2')
-#     atv_identifier = binascii.unhexlify(b'39633731323036382d626238642d343262652d386364332d323164643463383362323430')
-#     pairing_id = binascii.unhexlify(b'36666461643330392d353333312d343766662d623532352d313135386262313035616631')
-#     ltsk = binascii.unhexlify(b'fc585c4929d6c8012092dbc572e354a3f82d28f4a115a4caf5026715fc52605e')
-
-    # Uncomment and do pairing
-    #atv_pub_key, atv_identifier, ltsk = yield from pair(net, factory, pairing_id)
-
-
-    # Save return values from pair into variables above, comment out call to
-    # pair and then verify should work without pairing again
-    print('PUB Key:    ' + str(binascii.hexlify(atv_pub_key)))
-    print('Identifier: ' + str(binascii.hexlify(atv_identifier)))
-    print('Pairing:    ' + str(binascii.hexlify(pairing_id)))
-    print('LTSK:       ' + str(binascii.hexlify(ltsk)))
-
-    controller_to_accessory_key, accessory_to_controller_key = yield from verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id)
-
-    net.enable_encryption(controller_to_accessory_key, accessory_to_controller_key)
-
-    yield from send_messages(net, factory)
-
-    net.close()
-
-@asyncio.coroutine
 def pair(net, factory, pairing_id):
     print('Initiate pairing process...')
 
@@ -296,18 +201,18 @@ def pair(net, factory, pairing_id):
 
     # --------------------------------------------------
 
-    tlv = make_tlv({TLV_METHOD: b'\x00', TLV_SEQ_NO: b'\x01'})
+    tlv = tlv8.write_tlv({tlv8.TLV_METHOD: b'\x00', tlv8.TLV_SEQ_NO: b'\x01'})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
 
-    if TLV_BACK_OFF in pairing_data:
+    if tlv8.TLV_BACK_OFF in pairing_data:
         print('Retry in {}s'.format(int.from_bytes(pairing_data[TLV_BACK_OFF], byteorder='big')))
         sys.exit(1)
 
-    atv_salt = pairing_data[TLV_SALT]
-    atv_pub_key = pairing_data[TLV_PUBLIC_KEY]
+    atv_salt = pairing_data[tlv8.TLV_SALT]
+    atv_pub_key = pairing_data[tlv8.TLV_PUBLIC_KEY]
 
     # --------------------------------------------------
 
@@ -341,14 +246,14 @@ def pair(net, factory, pairing_id):
     pretty('LOCAL PROOF: ', proof)
 
     print('Initiate pairing process...')
-    tlv = make_tlv({TLV_SEQ_NO: b'\x03',
-                    TLV_PUBLIC_KEY: pub_key,
-                    TLV_PROOF: proof})
+    tlv = tlv8.write_tlv({tlv8.TLV_SEQ_NO: b'\x03',
+                          tlv8.TLV_PUBLIC_KEY: pub_key,
+                          tlv8.TLV_PROOF: proof})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
-    atv_proof = pairing_data[TLV_PROOF]
+    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    atv_proof = pairing_data[tlv8.TLV_PROOF]
     pretty('ATV Proof', atv_proof)
 
     srp_session_key = binascii.unhexlify(client_session_key)
@@ -364,9 +269,9 @@ def pair(net, factory, pairing_id):
     device_info = ios_device_x + pairing_id + srp_auth_public
     device_signature = srp_signing_key.sign(device_info)
 
-    tlv = make_tlv({TLV_IDENTIFIER: pairing_id,
-                    TLV_PUBLIC_KEY: srp_auth_public,
-                    TLV_SIGNATURE: device_signature})
+    tlv = tlv8.write_tlv({tlv8.TLV_IDENTIFIER: pairing_id,
+                          tlv8.TLV_PUBLIC_KEY: srp_auth_public,
+                          tlv8.TLV_SIGNATURE: device_signature})
 
     chacha = Chacha20Cipher(session_key, session_key)
     encrypted_data = chacha.encrypt(tlv, nounce='PS-Msg05'.encode())
@@ -374,23 +279,24 @@ def pair(net, factory, pairing_id):
 
     # --------------------------------------------------
 
-    tlv = make_tlv({TLV_SEQ_NO: b'\x05', TLV_ENCRYPTED_DATA: encrypted_data})
+    tlv = tlv8.write_tlv({tlv8.TLV_SEQ_NO: b'\x05',
+                          tlv8.TLV_ENCRYPTED_DATA: encrypted_data})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
-    encrypted_data = pairing_data[TLV_ENCRYPTED_DATA]
+    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    encrypted_data = pairing_data[tlv8.TLV_ENCRYPTED_DATA]
 
     decrypted_tlv_bytes = chacha.decrypt(encrypted_data, nounce='PS-Msg06'.encode())
     if not decrypted_tlv_bytes:
         print('Failed to decrypt')
         sys.exit(1)
-    decrypted_tlv = parse_tlv(decrypted_tlv_bytes)
+    decrypted_tlv = tlv8.read_tlv(decrypted_tlv_bytes)
     print('DECRYPTED: {0}'.format(decrypted_tlv))
 
-    atv_identifier = decrypted_tlv[TLV_IDENTIFIER]
-    atv_signature = decrypted_tlv[TLV_SIGNATURE]
-    atv_pub_key = decrypted_tlv[TLV_PUBLIC_KEY]
+    atv_identifier = decrypted_tlv[tlv8.TLV_IDENTIFIER]
+    atv_signature = decrypted_tlv[tlv8.TLV_SIGNATURE]
+    atv_pub_key = decrypted_tlv[tlv8.TLV_PUBLIC_KEY]
     pretty('ATV identifier', atv_identifier)
     pretty('ATV signature', atv_signature)
     pretty('ATV public key', atv_pub_key)
@@ -407,13 +313,14 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     srp_verify_private = curve25519.Private(secret=os.urandom(32))
     srp_verify_public = srp_verify_private.get_public()
 
-    tlv = make_tlv({TLV_SEQ_NO: b'\x01', TLV_PUBLIC_KEY: srp_verify_public.serialize()})
+    tlv = tlv8.write_tlv({tlv8.TLV_SEQ_NO: b'\x01',
+                          tlv8.TLV_PUBLIC_KEY: srp_verify_public.serialize()})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    resp = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
-    atv_session_pub_key = resp[TLV_PUBLIC_KEY]
-    atv_encrypted = resp[TLV_ENCRYPTED_DATA]
+    resp = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    atv_session_pub_key = resp[tlv8.TLV_PUBLIC_KEY]
+    atv_encrypted = resp[tlv8.TLV_ENCRYPTED_DATA]
     pretty('ATV Public key', atv_pub_key)
     pretty('ATV Encrypted',  atv_encrypted)
 
@@ -428,10 +335,10 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     chacha = Chacha20Cipher(session_key, session_key)
     decrypted = chacha.decrypt(atv_encrypted, nounce='PV-Msg02'.encode())
 
-    decrypted_tlv = parse_tlv(decrypted)
+    decrypted_tlv = tlv8.read_tlv(decrypted)
 
-    identifier = decrypted_tlv[TLV_IDENTIFIER]
-    signature = decrypted_tlv[TLV_SIGNATURE]
+    identifier = decrypted_tlv[tlv8.TLV_IDENTIFIER]
+    signature = decrypted_tlv[tlv8.TLV_SIGNATURE]
 
     if identifier != atv_identifier:
         print('Not correct device')
@@ -446,18 +353,20 @@ def verify(net, factory, atv_pub_key, atv_identifier, ltsk, pairing_id):
     signer = SigningKey(ltsk)
     device_signature = signer.sign(device_info)
 
-    tlv = make_tlv({TLV_IDENTIFIER: pairing_id, TLV_SIGNATURE: device_signature})
+    tlv = tlv8.write_tlv({tlv8.TLV_IDENTIFIER: pairing_id,
+                          tlv8.TLV_SIGNATURE: device_signature})
 
     print("TLV: {0}".format(tlv))
-    print("Decoded: {0}".format(parse_tlv(tlv)))
+    print("Decoded: {0}".format(tlv8.read_tlv(tlv)))
     chacha = Chacha20Cipher(session_key, session_key)
     encrypted_data = chacha.encrypt(tlv, nounce='PV-Msg03'.encode())
 
-    tlv = make_tlv({TLV_SEQ_NO: b'\x03', TLV_ENCRYPTED_DATA: encrypted_data})
+    tlv = tlv8.write_tlv({tlv8.TLV_SEQ_NO: b'\x03',
+                          tlv8.TLV_ENCRYPTED_DATA: encrypted_data})
     net.send(factory.crypto_pairing(tlv))
 
     resp = yield from net.receive()
-    pairing_data = parse_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
+    pairing_data = tlv8.read_tlv(resp.Extensions[CryptoPairingMessage.cryptoPairingMessage].pairingData)
     # TODO: check status code
 
     controller_to_accessory_key = hkdf_expand('MediaRemote-Salt',
