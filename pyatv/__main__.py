@@ -124,7 +124,7 @@ class DeviceCommands:
 
         try:
             yield from self.atv.airplay.start_authentication()
-            pin = input('Enter PIN on screen: ')
+            pin = input('Enter PIN on screen: ')  # TODO: do not use input
             yield from self.atv.airplay.finish_authentication(pin)
             print('You may now use these credentials:')
             print(credentials)
@@ -176,7 +176,10 @@ class DeviceCommands:
         # TODO: Dummy code here until pairing has been refactored
         print("PROTOTYPE: Pair with MRP device")
         yield from self.atv.pairing.start()
-        yield from self.atv.pairing.stop()
+        sys.stdout.write('PIN Code: ')
+        sys.stdout.flush()
+        pin = yield from self.loop.run_in_executor(None, sys.stdin.readline)
+        yield from self.atv.pairing.stop(pin=pin)
 
 
 class PushListener:

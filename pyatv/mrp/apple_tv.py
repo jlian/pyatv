@@ -5,8 +5,9 @@ import asyncio
 
 from pyatv import exceptions
 from pyatv.mrp import prototype
+from pyatv.mrp.srp import SRPAuthHandler
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
-                             Playing, PushUpdater)
+                             Playing, PushUpdater, PairingHandler)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,17 +38,17 @@ class MrpPushUpdater(PushUpdater):
 
 # TODO: This is PURE prototype stuff. It _must_ be re-written, but with this
 # code at least some testing can be performed.
-class MrpPairingHandler(object):
+class MrpPairingHandler(PairingHandler):
     """Base class for API used to pair with an Apple TV."""
 
     def __init__(self, loop, address, port):
         """Initialize a new MrpPairingHandler."""
         self.factory = prototype.MessageFactory()
-        self.net = prototype.TempNetwork(address, port, loop)
+        self.connection = prototype.MrpConnection(address, port, loop)
         self.pairing_id = '6fdad309-5331-47ff-b525-1158bb105af1'.encode()
-        self.atv_pub_key = None
-        self.atv_identifier = None
-        self.ltsk = None
+        self.srp = SRPAuthHandler(self.pairing_id)
+        self.pair_handler = prototype.MrpPairingHandler(
+            self.factory, self.connection, self.srp)
 
     @property
     def has_paired(self):
@@ -60,22 +61,25 @@ class MrpPairingHandler(object):
     @asyncio.coroutine
     def start(self, **kwargs):
         """Start pairing process."""
-        yield from self.net.connect()
-        yield from prototype.device_information(self.net)
-        atv_pub_key, atv_identifier, ltsk = yield from prototype.pair(
-            self.net, self.factory, self.pairing_id)
-        self.atv_pub_key = atv_pub_key
-        self.atv_identifier = atv_identifier
-        self.ltsk = ltsk
+        yield from self.connection.connect()
+        yield from prototype.device_information(self.connection)
+        yield from self.pair_handler.start_pairing()
 
     @asyncio.coroutine
     def stop(self, **kwargs):
         """Stop pairing process."""
-        c2a_key, a2c_key = yield from prototype.verify(
-            self.net, self.factory, self.atv_pub_key, self.atv_identifier,
-            self.ltsk, self.pairing_id)
+        # Finish off pairing process
+        pin = int(kwargs['pin'])
+        self.pairing_details = yield from self.pair_handler.finish_pairing(pin)
 
-        self.net.enable_encryption(c2a_key, a2c_key)
+        # Verify credentials and generate keys
+        pair_verifier = prototype.MrpPairingVerifier(
+            self.connection, self.srp, self.factory, self.pairing_details)
+
+        yield from pair_verifier.verify_credentials()
+        output_key, input_key = pair_verifier.encryption_keys()
+
+        self.connection.enable_encryption(output_key, input_key)
 
         # Dummy code where messages can be sent when testing
         yield from self._send_messages()
@@ -92,12 +96,12 @@ class MrpPairingHandler(object):
         config.nowPlayingUpdates = True
         config.volumeUpdates = True
         config.keyboardUpdates = True
-        self.net.send(message)
+        self.connection.send(message)
 
         _LOGGER.debug("Waiting for messages...")
         recv = None
         while recv != b'':
-            recv = yield from self.net.receive()
+            recv = yield from self.connection.receive()
 
     @asyncio.coroutine
     def set(self, key, value, **kwargs):
