@@ -4,8 +4,10 @@ import logging
 import asyncio
 
 from pyatv import exceptions
-from pyatv.mrp import prototype
-from pyatv.mrp.srp import SRPAuthHandler
+from pyatv.mrp import messages
+from pyatv.mrp.srp import (Credentials, SRPAuthHandler)
+from pyatv.mrp.connection import MrpConnection
+from pyatv.mrp.pairing import (MrpPairingProcedure, MrpPairingVerifier)
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
                              Playing, PushUpdater, PairingHandler)
 
@@ -15,7 +17,14 @@ _LOGGER = logging.getLogger(__name__)
 class MrpRemoteControl(RemoteControl):
     """Implementation of API for controlling an Apple TV."""
 
-    pass
+    def __init__(self, tmp):
+        self.tmp = tmp
+
+    @asyncio.coroutine
+    def stop(self):
+        """Press key stop."""
+        # TODO: This does nothing at the moment and lacks connection abstraction
+        yield from self.tmp.login()
 
 
 class MrpPlaying(Playing):
@@ -36,19 +45,15 @@ class MrpPushUpdater(PushUpdater):
     pass
 
 
-# TODO: This is PURE prototype stuff. It _must_ be re-written, but with this
-# code at least some testing can be performed.
 class MrpPairingHandler(PairingHandler):
     """Base class for API used to pair with an Apple TV."""
 
-    def __init__(self, loop, address, port):
+    def __init__(self, loop, connection, srp):
         """Initialize a new MrpPairingHandler."""
-        self.factory = prototype.MessageFactory()
-        self.connection = prototype.MrpConnection(address, port, loop)
-        self.pairing_id = '6fdad309-5331-47ff-b525-1158bb105af1'.encode()
-        self.srp = SRPAuthHandler(self.pairing_id)
-        self.pair_handler = prototype.MrpPairingHandler(
-            self.factory, self.connection, self.srp)
+        self.connection = connection
+        self.srp = srp
+        self.pairing_procedure = MrpPairingProcedure(self.connection, self.srp)
+        self.credentials = None
 
     @property
     def has_paired(self):
@@ -56,52 +61,27 @@ class MrpPairingHandler(PairingHandler):
 
         The value will be reset when stop() is called.
         """
-        raise exceptions.NotSupportedError
+        return self.credentials is not None
 
     @asyncio.coroutine
     def start(self, **kwargs):
         """Start pairing process."""
         yield from self.connection.connect()
-        yield from prototype.device_information(self.connection)
-        yield from self.pair_handler.start_pairing()
+
+        # TODO: do not hardcode parameters
+        message = messages.device_information(
+            'pyatv', '6fdad309-5331-47ff-b525-1158bb105af1')
+        self.connection.send(message)
+        yield from self.connection.receive()
+
+        yield from self.pairing_procedure.start_pairing()
 
     @asyncio.coroutine
     def stop(self, **kwargs):
         """Stop pairing process."""
         # Finish off pairing process
         pin = int(kwargs['pin'])
-        self.pairing_details = yield from self.pair_handler.finish_pairing(pin)
-
-        # Verify credentials and generate keys
-        pair_verifier = prototype.MrpPairingVerifier(
-            self.connection, self.srp, self.factory, self.pairing_details)
-
-        yield from pair_verifier.verify_credentials()
-        output_key, input_key = pair_verifier.encryption_keys()
-
-        self.connection.enable_encryption(output_key, input_key)
-
-        # Dummy code where messages can be sent when testing
-        yield from self._send_messages()
-
-    @asyncio.coroutine
-    def _send_messages(self):
-        from .protobuf import ProtocolMessage_pb2 as PB
-        from .protobuf import ClientUpdatesConfigMessage_pb2 as ClientUpdates
-        message = self.factory.make(
-            PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE,
-            add_identifier=False)
-        config = message.Extensions[ClientUpdates.clientUpdatesConfigMessage]
-        config.artworkUpdates = True
-        config.nowPlayingUpdates = True
-        config.volumeUpdates = True
-        config.keyboardUpdates = True
-        self.connection.send(message)
-
-        _LOGGER.debug("Waiting for messages...")
-        recv = None
-        while recv != b'':
-            recv = yield from self.connection.receive()
+        self.credentials = yield from self.pairing_procedure.finish_pairing(pin)
 
     @asyncio.coroutine
     def set(self, key, value, **kwargs):
@@ -115,7 +95,8 @@ class MrpPairingHandler(PairingHandler):
     @asyncio.coroutine
     def get(self, key):
         """Retrieve a process specific value."""
-        raise exceptions.NotSupportedError
+        if key == 'credentials' and self.credentials:
+            return str(self.credentials)
 
 
 class MrpAppleTV(AppleTV):
@@ -127,18 +108,52 @@ class MrpAppleTV(AppleTV):
         """Initialize a new Apple TV."""
         super().__init__()
 
+        self._session = session
         self._service = details.usable_service()
-        self._atv_remote = MrpRemoteControl()
+
+        self._connection = MrpConnection(
+            details.address, self._service.port, loop)
+        self._srp = SRPAuthHandler(
+            '6fdad309-5331-47ff-b525-1158bb105af1'.encode())
+
+        self._atv_remote = MrpRemoteControl(self)
         self._atv_metadata = MrpMetadata()
         self._atv_push_updater = MrpPushUpdater()
         self._atv_pairing = MrpPairingHandler(
-            loop, details.address, self._service.port)
+            loop, self._connection, self._srp)
         self._airplay = airplay
 
     @asyncio.coroutine
     def login(self):
         """Perform an explicit login."""
-        _LOGGER.debug('Login called')
+        # TODO: This is hack-ish. Must refactor and fix better handling later.
+
+        yield from self._connection.connect()
+        message = messages.device_information(
+            'pyatv', '6fdad309-5331-47ff-b525-1158bb105af1')
+        self._connection.send(message)
+        yield from self._connection.receive()
+
+        # Verify credentials and generate keys
+        credentials = Credentials.parse(self._service.device_credentials)
+        print(credentials)
+        pair_verifier = MrpPairingVerifier(
+            self._connection, self._srp, credentials)
+
+        yield from pair_verifier.verify_credentials()
+        output_key, input_key = pair_verifier.encryption_keys()
+        self._connection.enable_encryption(output_key, input_key)
+
+        yield from self._send_messages()
+
+    @asyncio.coroutine
+    def _send_messages(self):
+        self._connection.send(messages.client_updates_config())
+
+        _LOGGER.debug("Waiting for messages...")
+        recv = None
+        while recv != b'':
+            recv = yield from self._connection.receive()
 
     @asyncio.coroutine
     def logout(self):
@@ -146,7 +161,7 @@ class MrpAppleTV(AppleTV):
 
         Must be done when session is no longer needed to not leak resources.
         """
-        _LOGGER.debug('Logout called')
+        self._session.close()
 
     @property
     def service(self):

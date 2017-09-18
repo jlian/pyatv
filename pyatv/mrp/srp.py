@@ -17,7 +17,34 @@ from ed25519.keys import SigningKey, VerifyingKey
 
 _LOGGER = logging.getLogger(__name__)
 
-PairingDetails = namedtuple('PairingDetails', 'ltpk ltsk atv_id client_id')
+#PairingDetails = namedtuple('PairingDetails', 'ltpk ltsk atv_id client_id')
+
+class Credentials:
+
+    def __init__(self, ltpk, ltsk, atv_id, client_id):
+        self.ltpk = ltpk
+        self.ltsk = ltsk
+        self.atv_id = atv_id
+        self.client_id = client_id
+
+    @classmethod
+    def parse(self, detail_string):
+        split = detail_string.split(':')
+        if len(split) != 4:
+            raise ArgumentTypeError('invalid credentials')
+
+        ltpk = binascii.unhexlify(split[0])
+        ltsk = binascii.unhexlify(split[1])
+        atv_id = binascii.unhexlify(split[2])
+        client_id = binascii.unhexlify(split[3])
+        return Credentials(ltpk, ltsk, atv_id, client_id)
+
+    def __str__(self):
+        return '{0}:{1}:{2}:{3}'.format(
+            binascii.hexlify(self.ltpk).decode('utf-8'),
+            binascii.hexlify(self.ltsk).decode('utf-8'),
+            binascii.hexlify(self.atv_id).decode('utf-8'),
+            binascii.hexlify(self.client_id).decode('utf-8'))
 
 
 # Special log method to avoid hexlify conversion if debug is off
@@ -68,10 +95,9 @@ class SRPAuthHandler:
         self._verify_public = self._verify_private.get_public()
         return self._auth_public, self._verify_public.serialize()
 
-    def verify1(self, atv_pub_key, atv_session_pub_key,
-                atv_identifier, atv_encrypted, ltsk):
+    def verify1(self, credentials, session_pub_key, encrypted):
         """First verification step."""
-        public = curve25519.Public(atv_session_pub_key)
+        public = curve25519.Public(session_pub_key)
         self._shared = self._verify_private.get_shared_key(
             public, hashfunc=lambda x: x)  # No additional hashing used
 
@@ -80,25 +106,25 @@ class SRPAuthHandler:
                                   self._shared)
 
         chacha = chacha20.Chacha20Cipher(session_key, session_key)
-        decrypted = chacha.decrypt(atv_encrypted, nounce='PV-Msg02'.encode())
+        decrypted = chacha.decrypt(encrypted, nounce='PV-Msg02'.encode())
 
         decrypted_tlv = tlv8.read_tlv(decrypted)
 
         identifier = decrypted_tlv[tlv8.TLV_IDENTIFIER]
         signature = decrypted_tlv[tlv8.TLV_SIGNATURE]
 
-        if identifier != atv_identifier:
+        if identifier != credentials.atv_id:
             raise Exception('incorrect device response')  # TODO: new exception
 
-        info = atv_session_pub_key + \
+        info = session_pub_key + \
             bytes(identifier) + self._verify_public.serialize()
-        ltpk = VerifyingKey(bytes(atv_pub_key))
+        ltpk = VerifyingKey(bytes(credentials.ltpk))
         ltpk.verify(bytes(signature), bytes(info))  # throws if no match
 
         device_info = self._verify_public.serialize() + \
-            self.pairing_id + atv_session_pub_key
+            self.pairing_id + session_pub_key
 
-        signer = SigningKey(ltsk)
+        signer = SigningKey(credentials.ltsk)
         device_signature = signer.sign(device_info)
 
         tlv = tlv8.write_tlv({tlv8.TLV_IDENTIFIER: self.pairing_id,
@@ -190,5 +216,5 @@ class SRPAuthHandler:
 
         # TODO: verify signature here
 
-        return PairingDetails(atv_pub_key, self._signing_key.to_seed(),
-                              atv_identifier, self.pairing_id)
+        return Credentials(atv_pub_key, self._signing_key.to_seed(),
+                           atv_identifier, self.pairing_id)
