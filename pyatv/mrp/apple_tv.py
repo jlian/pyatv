@@ -152,7 +152,7 @@ class MrpProtocol(object):
             self._initial_message_sent = False
             self._outstanding = {}
 
-        self._connection.close()
+        self.connection.close()
 
     @asyncio.coroutine
     def _connect_and_encrypt(self):
