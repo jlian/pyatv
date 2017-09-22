@@ -70,7 +70,7 @@ class MrpPairingHandler(PairingHandler):
     @asyncio.coroutine
     def stop(self, **kwargs):
         """Stop pairing process."""
-        pin = int(kwargs['pin'])
+        pin = kwargs['pin']
 
         self.service.device_credentials = \
             yield from self.pairing_procedure.finish_pairing(pin)
