@@ -29,7 +29,8 @@ def _print_commands(title, api):
 def _read_input(loop, prompt):
     sys.stdout.write(prompt)
     sys.stdout.flush()
-    return (yield from loop.run_in_executor(None, sys.stdin.readline))
+    input = yield from loop.run_in_executor(None, sys.stdin.readline)
+    return input.strip()
 
 
 class GlobalCommands:
