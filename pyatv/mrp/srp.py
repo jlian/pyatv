@@ -1,11 +1,10 @@
 """Prototype code for MRP."""
 
 import os
+import uuid
 import binascii
 import hashlib
 import logging
-
-from collections import namedtuple
 
 import curve25519
 
@@ -17,11 +16,12 @@ from ed25519.keys import SigningKey, VerifyingKey
 
 _LOGGER = logging.getLogger(__name__)
 
-#PairingDetails = namedtuple('PairingDetails', 'ltpk ltsk atv_id client_id')
 
 class Credentials:
+    """Identifiers and encryption keys used by MRP."""
 
     def __init__(self, ltpk, ltsk, atv_id, client_id):
+        """Initialize a new Credentials."""
         self.ltpk = ltpk
         self.ltsk = ltsk
         self.atv_id = atv_id
@@ -29,9 +29,10 @@ class Credentials:
 
     @classmethod
     def parse(self, detail_string):
+        """Parse a string represention of Credentials."""
         split = detail_string.split(':')
         if len(split) != 4:
-            raise ArgumentTypeError('invalid credentials')
+            raise Exception('invalid credentials')  # TODO: other exception
 
         ltpk = binascii.unhexlify(split[0])
         ltsk = binascii.unhexlify(split[1])
@@ -40,6 +41,7 @@ class Credentials:
         return Credentials(ltpk, ltsk, atv_id, client_id)
 
     def __str__(self):
+        """Return a string representation of credentials."""
         return '{0}:{1}:{2}:{3}'.format(
             binascii.hexlify(self.ltpk).decode('utf-8'),
             binascii.hexlify(self.ltsk).decode('utf-8'),
@@ -73,9 +75,9 @@ def hkdf_expand(salt, info, shared_secret):
 class SRPAuthHandler:
     """Handle SRP crypto routines for auth and key derivation."""
 
-    def __init__(self, pairing_id):
+    def __init__(self):
         """Initialize a new SRPAuthHandler."""
-        self.pairing_id = pairing_id
+        self.pairing_id = str(uuid.uuid4()).encode()
         self._signing_key = None
         self._auth_private = None
         self._auth_public = None
@@ -122,12 +124,12 @@ class SRPAuthHandler:
         ltpk.verify(bytes(signature), bytes(info))  # throws if no match
 
         device_info = self._verify_public.serialize() + \
-            self.pairing_id + session_pub_key
+            credentials.client_id + session_pub_key
 
         signer = SigningKey(credentials.ltsk)
         device_signature = signer.sign(device_info)
 
-        tlv = tlv8.write_tlv({tlv8.TLV_IDENTIFIER: self.pairing_id,
+        tlv = tlv8.write_tlv({tlv8.TLV_IDENTIFIER: credentials.client_id,
                               tlv8.TLV_SIGNATURE: device_signature})
 
         return chacha.encrypt(tlv, nounce='PV-Msg03'.encode())

@@ -269,10 +269,9 @@ def cli_handler(loop):
                          help='pairing guid (16 chars hex)',
                          dest='pairing_guid', default=None)
 
-    #ident = parser.add_mutually_exclusive_group()
-    parser.add_argument('-a', '--autodiscover',
+    parser.add_argument('-a', '--autodiscover', action='store_true',
                         help='automatically find a device',
-                        action='store_true', dest='autodiscover', default=False)
+                        dest='autodiscover', default=False)
     parser.add_argument('--device_credentials', help='credentials to device',
                         dest='device_credentials', default=None)
 
@@ -388,10 +387,10 @@ def _handle_commands(args, loop):
     details = AppleTV(args.address, args.name)
     if args.protocol == const.PROTOCOL_DMAP:
         details.add_service(DmapService(
-                args.device_credentials, port=args.port))
+            args.device_credentials, port=args.port))
     elif args.protocol == const.PROTOCOL_MRP:
         details.add_service(MrpService(
-                args.port, device_credentials=args.device_credentials))
+            args.port, device_credentials=args.device_credentials))
 
     atv = pyatv.connect_to_apple_tv(details, loop, protocol=args.protocol)
     if not atv.push_updater:  # TODO: not implemented in MRP yet

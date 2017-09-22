@@ -404,7 +404,8 @@ class DmapAppleTV(AppleTV):
         daap_http = HttpSession(
             session,
             'http://{0}:{1}/'.format(details.address, self._service.port))
-        self._requester = DaapRequester(daap_http, self._service.login_id)
+        self._requester = DaapRequester(
+            daap_http, self._service.device_credentials)
 
         self._apple_tv = BaseDmapAppleTV(self._requester)
         self._atv_remote = DmapRemoteControl(self._apple_tv)

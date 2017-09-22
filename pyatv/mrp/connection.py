@@ -36,6 +36,11 @@ class MrpConnection:
         """Enable encryption with the specified keys."""
         self._chacha = chacha20.Chacha20Cipher(output_key, input_key)
 
+    @property
+    def connected(self):
+        """If a connection is open or not."""
+        return self._reader and self._writer
+
     @asyncio.coroutine
     def connect(self):
         """Connect to device."""
@@ -45,6 +50,7 @@ class MrpConnection:
     def close(self):
         """Close connection to device."""
         self._writer.close()
+        self._chacha = None
 
     def send(self, message):
         """Send message to device."""

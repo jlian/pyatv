@@ -28,9 +28,9 @@ def _get_pairing_data(resp):
 class MrpPairingProcedure:
     """Perform pairing and return new credentials."""
 
-    def __init__(self, connection, srp):
+    def __init__(self, protocol, srp):
         """Initialize a new MrpPairingHandler."""
-        self.connection = connection
+        self.protocol = protocol
         self.srp = srp
         self._atv_salt = None
         self._atv_pub_key = None
@@ -40,10 +40,12 @@ class MrpPairingProcedure:
         """Start pairing procedure."""
         self.srp.initialize()
 
-        self.connection.send(messages.crypto_pairing(
-            {tlv8.TLV_METHOD: b'\x00', tlv8.TLV_SEQ_NO: b'\x01'}))
+        msg = messages.crypto_pairing({
+            tlv8.TLV_METHOD: b'\x00',
+            tlv8.TLV_SEQ_NO: b'\x01'})
+        resp = yield from self.protocol.send_and_receive(
+            msg, generate_identifier=False)
 
-        resp = yield from self.connection.receive()
         pairing_data = _get_pairing_data(resp)
 
         if tlv8.TLV_BACK_OFF in pairing_data:
@@ -60,22 +62,25 @@ class MrpPairingProcedure:
         self.srp.step1(pin)
 
         pub_key, proof = self.srp.step2(self._atv_pub_key, self._atv_salt)
-        self.connection.send(messages.crypto_pairing(
-            {tlv8.TLV_SEQ_NO: b'\x03',
-             tlv8.TLV_PUBLIC_KEY: pub_key,
-             tlv8.TLV_PROOF: proof}))
 
-        resp = yield from self.connection.receive()
+        msg = messages.crypto_pairing({
+            tlv8.TLV_SEQ_NO: b'\x03',
+            tlv8.TLV_PUBLIC_KEY: pub_key,
+            tlv8.TLV_PROOF: proof})
+        resp = yield from self.protocol.send_and_receive(
+            msg, generate_identifier=False)
+
         pairing_data = _get_pairing_data(resp)
         atv_proof = pairing_data[tlv8.TLV_PROOF]
         _log_debug('Device', Proof=atv_proof)
 
         encrypted_data = self.srp.step3()
-        self.connection.send(messages.crypto_pairing({
+        msg = messages.crypto_pairing({
             tlv8.TLV_SEQ_NO: b'\x05',
-            tlv8.TLV_ENCRYPTED_DATA: encrypted_data}))
+            tlv8.TLV_ENCRYPTED_DATA: encrypted_data})
+        resp = yield from self.protocol.send_and_receive(
+            msg, generate_identifier=False)
 
-        resp = yield from self.connection.receive()
         pairing_data = _get_pairing_data(resp)
         encrypted_data = pairing_data[tlv8.TLV_ENCRYPTED_DATA]
 
@@ -85,9 +90,9 @@ class MrpPairingProcedure:
 class MrpPairingVerifier:
     """Verify credentials and derive new encryption keys."""
 
-    def __init__(self, connection, srp, credentials):
+    def __init__(self, protocol, srp, credentials):
         """Initialize a new MrpPairingVerifier."""
-        self.connection = connection
+        self.protocol = protocol
         self.srp = srp
         self.credentials = credentials
         self._output_key = None
@@ -98,11 +103,12 @@ class MrpPairingVerifier:
         """Verify credentials with device."""
         _, public_key = self.srp.initialize()
 
-        self.connection.send(messages.crypto_pairing({
+        msg = messages.crypto_pairing({
             tlv8.TLV_SEQ_NO: b'\x01',
-            tlv8.TLV_PUBLIC_KEY: public_key}))
+            tlv8.TLV_PUBLIC_KEY: public_key})
+        resp = yield from self.protocol.send_and_receive(
+            msg, generate_identifier=False)
 
-        resp = yield from self.connection.receive()
         resp = _get_pairing_data(resp)
         session_pub_key = resp[tlv8.TLV_PUBLIC_KEY]
         encrypted = resp[tlv8.TLV_ENCRYPTED_DATA]
@@ -110,11 +116,12 @@ class MrpPairingVerifier:
 
         encrypted_data = self.srp.verify1(
             self.credentials, session_pub_key, encrypted)
-        self.connection.send(messages.crypto_pairing({
+        msg = messages.crypto_pairing({
             tlv8.TLV_SEQ_NO: b'\x03',
-            tlv8.TLV_ENCRYPTED_DATA: encrypted_data}))
+            tlv8.TLV_ENCRYPTED_DATA: encrypted_data})
+        resp = yield from self.protocol.send_and_receive(
+            msg, generate_identifier=False)
 
-        resp = yield from self.connection.receive()
         # TODO: check status code
 
         self._output_key, self._input_key = self.srp.verify2()
