@@ -1,0 +1,58 @@
+syntax = "proto2";
+
+import "pyatv/mrp/protobuf/ProtocolMessage.proto";
+
+extend ProtocolMessage {
+  optional SetStateMessage setStateMessage = 9;
+}
+
+message SetStateMessage {
+
+  message NowPlayingInfoMessage {
+    optional double duration = 3;
+    optional double elapsedTime = 4;
+    optional double playbackRate = 5; // TODO: not parsed correctly?
+    optional double timestamp = 8;
+    optional string title = 9;
+    optional uint64 uniqueIdentifier = 10;
+    optional uint32 isAlwaysLive = 17;
+  }
+
+  enum SupportedCommand {
+    Play = 1;
+    Pause = 2;
+    TogglePlayPause = 3;
+    EnableLanguageOption = 53;
+    DisableLanguageOption = 54;
+    Stop = 4;
+    SkipForward = 18;
+    SkipBackward = 19;
+    BeginFastForward = 9;
+    BeginRewind = 11;
+    ChangePlaybackRate = 20;
+    SeekToPlaybackPosition = 45;
+    NextInContext = 34;
+    PreviousInContext = 35;
+    RemoveFromPlaybackQueue = 56;
+    ReorderPlaybackQueue = 55;
+    PlayItemInPlaybackQueue = 57;
+  }
+
+  message SupportedCommandMessage {
+    required SupportedCommand command = 1;
+    required bool enabled = 2;
+    optional bool canScrub = 16;
+    // optional ??? preferredInterval = ???;
+    // optional ??? supportedRate = ???;
+  }
+
+  message SupportedCommands {
+    repeated SupportedCommandMessage supportedCommand = 1;
+  }
+
+  optional NowPlayingInfoMessage nowPlayingInfo= 1;
+  optional SupportedCommands supportedCommands = 2;
+  optional string displayID = 4;
+  optional string displayName = 5;
+  optional int32 playbackState = 6;
+}

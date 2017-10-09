@@ -9,6 +9,7 @@ from pyatv.mrp.protobuf import ClientUpdatesConfigMessage_pb2 as ClientUpdates
 from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB  # noqa
 from pyatv.mrp.protobuf import DeviceInfoMessage_pb2 as DeviceInfoMessage
 from pyatv.mrp.protobuf import CryptoPairingMessage_pb2 as CryptoPairingMessage
+from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
 
 
 def create(message_type, priority=0):

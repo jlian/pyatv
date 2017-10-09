@@ -227,7 +227,9 @@ class MrpProtocol(object):
                 _LOGGER.debug('Waiting for new message...')
                 resp = yield from self.connection.receive()
 
-                if resp.identifier:
+                if not resp:
+                    continue  # Only partial message received
+                elif resp.identifier:
                     identifier = resp.identifier
                 else:
                     identifier = 'type_' + str(resp.type)
