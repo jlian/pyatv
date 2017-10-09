@@ -4,11 +4,12 @@ import uuid
 import logging
 import asyncio
 
-from pyatv import exceptions
+from pyatv import (const, exceptions)
 from pyatv.mrp import messages
 from pyatv.mrp.srp import (Credentials, SRPAuthHandler)
 from pyatv.mrp.connection import MrpConnection
 from pyatv.mrp.pairing import (MrpPairingProcedure, MrpPairingVerifier)
+from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
                              Playing, PushUpdater, PairingHandler)
 
@@ -34,13 +35,82 @@ class MrpRemoteControl(RemoteControl):
 class MrpPlaying(Playing):
     """Implementation of API for retrieving what is playing."""
 
-    pass
+    def __init__(self, protocol):
+        """Initialize a new MrpPlaying."""
+        self.protocol = protocol
+        self.protocol.add_listener(self, PB.ProtocolMessage.SET_STATE_MESSAGE)
+        self._message = None
+
+    def handle_message(self, message):
+        self._message = message
+
+    def _nowplaying(self):
+        from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
+        index = SetStateMessage.setStateMessage
+        return self._message.Extensions[index].nowPlayingInfo
+
+    @property
+    def media_type(self):
+        """Type of media is currently playing, e.g. video, music."""
+        return const.MEDIA_TYPE_UNKNOWN
+
+    @property
+    def play_state(self):
+        """Play state, e.g. playing or paused."""
+        return const.PLAY_STATE_PLAYING  # TODO: just prototype stuff...
+
+    @property
+    def title(self):
+        """Title of the current media, e.g. movie or song name."""
+        return self._nowplaying().title
+
+    @property
+    def artist(self):
+        """Artist of the currently playing song."""
+        return None
+
+    @property
+    def album(self):
+        """Album of the currently playing song."""
+        return None
+
+    @property
+    def total_time(self):
+        """Total play time in seconds."""
+        return int(self._nowplaying().duration)
+
+    @property
+    def position(self):
+        """Position in the playing media (seconds)."""
+        # timestamp contains time of the latest "play" action, so it must be
+        # used to calculate the correct time here: elapsed + (now - timestamp)
+        return int(self._nowplaying().elapsedTime)
+
+    @property
+    def shuffle(self):
+        """If shuffle is enabled or not."""
+        return None
+
+    @property
+    def repeat(self):
+        """Repeat mode."""
+        return None
 
 
 class MrpMetadata(Metadata):
     """Implementation of API for retrieving metadata."""
 
-    pass
+    def __init__(self, protocol):
+        """Initialize a new MrpPlaying."""
+        self.protocol = protocol
+        self._playing = MrpPlaying(protocol)
+
+    @asyncio.coroutine
+    def playing(self):
+        """Return what is currently playing."""
+        yield from self.protocol.send(messages.client_updates_config())
+        yield from asyncio.sleep(2)
+        return self._playing
 
 
 class MrpPushUpdater(PushUpdater):
@@ -109,8 +179,15 @@ class MrpProtocol(object):
         self.srp = srp
         self.service = service
         self._outstanding = {}
+        self._listeners = {}
         self._future = None
         self._initial_message_sent = False
+
+    def add_listener(self, listener, message_type):
+        if type not in self._listeners:
+            self._listeners[message_type] = []
+
+        self._listeners[message_type].append(listener)
 
     @asyncio.coroutine
     def start(self):
@@ -239,9 +316,20 @@ class MrpProtocol(object):
                 if identifier in self._outstanding:
                     self._outstanding[identifier][1] = resp
                     self._outstanding[identifier][0].release()
+                else:
+                    self._dispatch(resp)
 
             except asyncio.CancelledError:
                 break
+
+    def _dispatch(self, message):
+        type = message.type
+
+        _LOGGER.debug('Dispatching message with type %d to listeners', type)
+
+        if type in self._listeners:
+            for listener in self._listeners[type]:
+                listener.handle_message(message)
 
 
 class MrpAppleTV(AppleTV):
@@ -263,7 +351,7 @@ class MrpAppleTV(AppleTV):
             loop, self._connection, self._srp, self._service)
 
         self._atv_remote = MrpRemoteControl(loop, self._protocol)
-        self._atv_metadata = MrpMetadata()
+        self._atv_metadata = MrpMetadata(self._protocol)
         self._atv_push_updater = MrpPushUpdater()
         self._atv_pairing = MrpPairingHandler(
             loop, self._protocol, self._srp, self._service)
