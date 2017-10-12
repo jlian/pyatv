@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/SetStateMessage.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n(pyatv/mrp/protobuf/SetStateMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"\xbd\x07\n\x0fSetStateMessage\x12>\n\x0enowPlayingInfo\x18\x01 \x01(\x0b\x32&.SetStateMessage.NowPlayingInfoMessage\x12=\n\x11supportedCommands\x18\x02 \x01(\x0b\x32\".SetStateMessage.SupportedCommands\x12\x11\n\tdisplayID\x18\x04 \x01(\t\x12\x13\n\x0b\x64isplayName\x18\x05 \x01(\t\x12\x15\n\rplaybackState\x18\x06 \x01(\x05\x1a\xa6\x01\n\x15NowPlayingInfoMessage\x12\x10\n\x08\x64uration\x18\x03 \x01(\x01\x12\x13\n\x0b\x65lapsedTime\x18\x04 \x01(\x01\x12\x14\n\x0cplaybackRate\x18\x05 \x01(\x01\x12\x11\n\ttimestamp\x18\x08 \x01(\x01\x12\r\n\x05title\x18\t \x01(\t\x12\x18\n\x10uniqueIdentifier\x18\n \x01(\x04\x12\x14\n\x0cisAlwaysLive\x18\x11 \x01(\r\x1ap\n\x17SupportedCommandMessage\x12\x32\n\x07\x63ommand\x18\x01 \x02(\x0e\x32!.SetStateMessage.SupportedCommand\x12\x0f\n\x07\x65nabled\x18\x02 \x02(\x08\x12\x10\n\x08\x63\x61nScrub\x18\x10 \x01(\x08\x1aW\n\x11SupportedCommands\x12\x42\n\x10supportedCommand\x18\x01 \x03(\x0b\x32(.SetStateMessage.SupportedCommandMessage\"\xf7\x02\n\x10SupportedCommand\x12\x08\n\x04Play\x10\x01\x12\t\n\x05Pause\x10\x02\x12\x13\n\x0fTogglePlayPause\x10\x03\x12\x18\n\x14\x45nableLanguageOption\x10\x35\x12\x19\n\x15\x44isableLanguageOption\x10\x36\x12\x08\n\x04Stop\x10\x04\x12\x0f\n\x0bSkipForward\x10\x12\x12\x10\n\x0cSkipBackward\x10\x13\x12\x14\n\x10\x42\x65ginFastForward\x10\t\x12\x0f\n\x0b\x42\x65ginRewind\x10\x0b\x12\x16\n\x12\x43hangePlaybackRate\x10\x14\x12\x1a\n\x16SeekToPlaybackPosition\x10-\x12\x11\n\rNextInContext\x10\"\x12\x15\n\x11PreviousInContext\x10#\x12\x1b\n\x17RemoveFromPlaybackQueue\x10\x38\x12\x18\n\x14ReorderPlaybackQueue\x10\x37\x12\x1b\n\x17PlayItemInPlaybackQueue\x10\x39:;\n\x0fsetStateMessage\x12\x10.ProtocolMessage\x18\t \x01(\x0b\x32\x10.SetStateMessage')
+  serialized_pb=_b('\n(pyatv/mrp/protobuf/SetStateMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"\x84\n\n\x0fSetStateMessage\x12>\n\x0enowPlayingInfo\x18\x01 \x01(\x0b\x32&.SetStateMessage.NowPlayingInfoMessage\x12=\n\x11supportedCommands\x18\x02 \x01(\x0b\x32\".SetStateMessage.SupportedCommands\x12\x11\n\tdisplayID\x18\x04 \x01(\t\x12\x13\n\x0b\x64isplayName\x18\x05 \x01(\t\x12\x35\n\rplaybackState\x18\x06 \x01(\x0e\x32\x1e.SetStateMessage.PlaybackState\x1a\xa3\x03\n\x15NowPlayingInfoMessage\x12\r\n\x05\x61lbum\x18\x01 \x01(\t\x12\x0e\n\x06\x61rtist\x18\x02 \x01(\t\x12\x10\n\x08\x64uration\x18\x03 \x01(\x01\x12\x13\n\x0b\x65lapsedTime\x18\x04 \x01(\x01\x12\x14\n\x0cplaybackRate\x18\x05 \x01(\x02\x12\x12\n\nrepeatMode\x18\x06 \x01(\x05\x12\x13\n\x0bshuffleMode\x18\x07 \x01(\x05\x12\x11\n\ttimestamp\x18\x08 \x01(\x01\x12\r\n\x05title\x18\t \x01(\t\x12\x18\n\x10uniqueIdentifier\x18\n \x01(\x04\x12\x17\n\x0fisExplicitTrack\x18\x0b \x01(\x08\x12\x12\n\nisMusicApp\x18\x0c \x01(\x08\x12\x1e\n\x16radioStationIdentifier\x18\r \x01(\x03\x12\x18\n\x10radioStationHash\x18\x0e \x01(\t\x12\x18\n\x10radioStationName\x18\x0f \x01(\t\x12\x19\n\x11\x61rtworkDataDigest\x18\x10 \x01(\x0c\x12\x14\n\x0cisAlwaysLive\x18\x11 \x01(\x08\x12\x17\n\x0fisAdvertisement\x18\x12 \x01(\x08\x1ap\n\x17SupportedCommandMessage\x12\x32\n\x07\x63ommand\x18\x01 \x02(\x0e\x32!.SetStateMessage.SupportedCommand\x12\x0f\n\x07\x65nabled\x18\x02 \x02(\x08\x12\x10\n\x08\x63\x61nScrub\x18\x10 \x01(\x08\x1aW\n\x11SupportedCommands\x12\x42\n\x10supportedCommand\x18\x01 \x03(\x0b\x32(.SetStateMessage.SupportedCommandMessage\"\xf7\x02\n\x10SupportedCommand\x12\x08\n\x04Play\x10\x01\x12\t\n\x05Pause\x10\x02\x12\x13\n\x0fTogglePlayPause\x10\x03\x12\x18\n\x14\x45nableLanguageOption\x10\x35\x12\x19\n\x15\x44isableLanguageOption\x10\x36\x12\x08\n\x04Stop\x10\x04\x12\x0f\n\x0bSkipForward\x10\x12\x12\x10\n\x0cSkipBackward\x10\x13\x12\x14\n\x10\x42\x65ginFastForward\x10\t\x12\x0f\n\x0b\x42\x65ginRewind\x10\x0b\x12\x16\n\x12\x43hangePlaybackRate\x10\x14\x12\x1a\n\x16SeekToPlaybackPosition\x10-\x12\x11\n\rNextInContext\x10\"\x12\x15\n\x11PreviousInContext\x10#\x12\x1b\n\x17RemoveFromPlaybackQueue\x10\x38\x12\x18\n\x14ReorderPlaybackQueue\x10\x37\x12\x1b\n\x17PlayItemInPlaybackQueue\x10\x39\"(\n\rPlaybackState\x12\x0b\n\x07Playing\x10\x01\x12\n\n\x06Paused\x10\x02:;\n\x0fsetStateMessage\x12\x10.ProtocolMessage\x18\t \x01(\x0b\x32\x10.SetStateMessage')
   ,
   dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,])
 
@@ -111,10 +111,32 @@ _SETSTATEMESSAGE_SUPPORTEDCOMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=669,
-  serialized_end=1044,
+  serialized_start=954,
+  serialized_end=1329,
 )
 _sym_db.RegisterEnumDescriptor(_SETSTATEMESSAGE_SUPPORTEDCOMMAND)
+
+_SETSTATEMESSAGE_PLAYBACKSTATE = _descriptor.EnumDescriptor(
+  name='PlaybackState',
+  full_name='SetStateMessage.PlaybackState',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='Playing', index=0, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Paused', index=1, number=2,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=1331,
+  serialized_end=1371,
+)
+_sym_db.RegisterEnumDescriptor(_SETSTATEMESSAGE_PLAYBACKSTATE)
 
 
 _SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE = _descriptor.Descriptor(
@@ -125,51 +147,128 @@ _SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='duration', full_name='SetStateMessage.NowPlayingInfoMessage.duration', index=0,
+      name='album', full_name='SetStateMessage.NowPlayingInfoMessage.album', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='artist', full_name='SetStateMessage.NowPlayingInfoMessage.artist', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='duration', full_name='SetStateMessage.NowPlayingInfoMessage.duration', index=2,
       number=3, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='elapsedTime', full_name='SetStateMessage.NowPlayingInfoMessage.elapsedTime', index=1,
+      name='elapsedTime', full_name='SetStateMessage.NowPlayingInfoMessage.elapsedTime', index=3,
       number=4, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='playbackRate', full_name='SetStateMessage.NowPlayingInfoMessage.playbackRate', index=2,
-      number=5, type=1, cpp_type=5, label=1,
+      name='playbackRate', full_name='SetStateMessage.NowPlayingInfoMessage.playbackRate', index=4,
+      number=5, type=2, cpp_type=6, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='timestamp', full_name='SetStateMessage.NowPlayingInfoMessage.timestamp', index=3,
+      name='repeatMode', full_name='SetStateMessage.NowPlayingInfoMessage.repeatMode', index=5,
+      number=6, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='shuffleMode', full_name='SetStateMessage.NowPlayingInfoMessage.shuffleMode', index=6,
+      number=7, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='timestamp', full_name='SetStateMessage.NowPlayingInfoMessage.timestamp', index=7,
       number=8, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='title', full_name='SetStateMessage.NowPlayingInfoMessage.title', index=4,
+      name='title', full_name='SetStateMessage.NowPlayingInfoMessage.title', index=8,
       number=9, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='uniqueIdentifier', full_name='SetStateMessage.NowPlayingInfoMessage.uniqueIdentifier', index=5,
+      name='uniqueIdentifier', full_name='SetStateMessage.NowPlayingInfoMessage.uniqueIdentifier', index=9,
       number=10, type=4, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='isAlwaysLive', full_name='SetStateMessage.NowPlayingInfoMessage.isAlwaysLive', index=6,
-      number=17, type=13, cpp_type=3, label=1,
+      name='isExplicitTrack', full_name='SetStateMessage.NowPlayingInfoMessage.isExplicitTrack', index=10,
+      number=11, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='isMusicApp', full_name='SetStateMessage.NowPlayingInfoMessage.isMusicApp', index=11,
+      number=12, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='radioStationIdentifier', full_name='SetStateMessage.NowPlayingInfoMessage.radioStationIdentifier', index=12,
+      number=13, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='radioStationHash', full_name='SetStateMessage.NowPlayingInfoMessage.radioStationHash', index=13,
+      number=14, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='radioStationName', full_name='SetStateMessage.NowPlayingInfoMessage.radioStationName', index=14,
+      number=15, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='artworkDataDigest', full_name='SetStateMessage.NowPlayingInfoMessage.artworkDataDigest', index=15,
+      number=16, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='isAlwaysLive', full_name='SetStateMessage.NowPlayingInfoMessage.isAlwaysLive', index=16,
+      number=17, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='isAdvertisement', full_name='SetStateMessage.NowPlayingInfoMessage.isAdvertisement', index=17,
+      number=18, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -185,8 +284,8 @@ _SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=297,
-  serialized_end=463,
+  serialized_start=329,
+  serialized_end=748,
 )
 
 _SETSTATEMESSAGE_SUPPORTEDCOMMANDMESSAGE = _descriptor.Descriptor(
@@ -229,8 +328,8 @@ _SETSTATEMESSAGE_SUPPORTEDCOMMANDMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=465,
-  serialized_end=577,
+  serialized_start=750,
+  serialized_end=862,
 )
 
 _SETSTATEMESSAGE_SUPPORTEDCOMMANDS = _descriptor.Descriptor(
@@ -259,8 +358,8 @@ _SETSTATEMESSAGE_SUPPORTEDCOMMANDS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=579,
-  serialized_end=666,
+  serialized_start=864,
+  serialized_end=951,
 )
 
 _SETSTATEMESSAGE = _descriptor.Descriptor(
@@ -300,8 +399,8 @@ _SETSTATEMESSAGE = _descriptor.Descriptor(
       options=None),
     _descriptor.FieldDescriptor(
       name='playbackState', full_name='SetStateMessage.playbackState', index=4,
-      number=6, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      number=6, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=1,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -311,6 +410,7 @@ _SETSTATEMESSAGE = _descriptor.Descriptor(
   nested_types=[_SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE, _SETSTATEMESSAGE_SUPPORTEDCOMMANDMESSAGE, _SETSTATEMESSAGE_SUPPORTEDCOMMANDS, ],
   enum_types=[
     _SETSTATEMESSAGE_SUPPORTEDCOMMAND,
+    _SETSTATEMESSAGE_PLAYBACKSTATE,
   ],
   options=None,
   is_extendable=False,
@@ -319,7 +419,7 @@ _SETSTATEMESSAGE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=87,
-  serialized_end=1044,
+  serialized_end=1371,
 )
 
 _SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE.containing_type = _SETSTATEMESSAGE
@@ -329,7 +429,9 @@ _SETSTATEMESSAGE_SUPPORTEDCOMMANDS.fields_by_name['supportedCommand'].message_ty
 _SETSTATEMESSAGE_SUPPORTEDCOMMANDS.containing_type = _SETSTATEMESSAGE
 _SETSTATEMESSAGE.fields_by_name['nowPlayingInfo'].message_type = _SETSTATEMESSAGE_NOWPLAYINGINFOMESSAGE
 _SETSTATEMESSAGE.fields_by_name['supportedCommands'].message_type = _SETSTATEMESSAGE_SUPPORTEDCOMMANDS
+_SETSTATEMESSAGE.fields_by_name['playbackState'].enum_type = _SETSTATEMESSAGE_PLAYBACKSTATE
 _SETSTATEMESSAGE_SUPPORTEDCOMMAND.containing_type = _SETSTATEMESSAGE
+_SETSTATEMESSAGE_PLAYBACKSTATE.containing_type = _SETSTATEMESSAGE
 DESCRIPTOR.message_types_by_name['SetStateMessage'] = _SETSTATEMESSAGE
 DESCRIPTOR.extensions_by_name['setStateMessage'] = setStateMessage
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)

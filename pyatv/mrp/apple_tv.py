@@ -23,12 +23,25 @@ class MrpRemoteControl(RemoteControl):
         """Initialize a new MrpRemoteControl."""
         self.loop = loop
         self.protocol = protocol
+        self.protocol.add_listener(self, PB.ProtocolMessage.REGISTER_HID_DEVICE_RESULT_MESSAGE)
+
+    @asyncio.coroutine
+    def handle_message(self, message):
+        from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
+        ext = RegisterHIDDeviceResultMessage.registerHIDDeviceResultMessage
+        res = message.Extensions[ext]
+
+        yield from self.protocol.send(messages.send_packed_virtual_touch_event(100, 0, 1, res.deviceIdentifier, 1))
+        yield from self.protocol.send(messages.send_packed_virtual_touch_event(200, 250, 2, res.deviceIdentifier, 1))
+        yield from self.protocol.send(messages.send_packed_virtual_touch_event(300, 500, 4, res.deviceIdentifier, 1))
 
     @asyncio.coroutine
     def stop(self):
         """Press key stop."""
         # TODO: just some sample code at the moment
         yield from self.protocol.send(messages.client_updates_config())
+        yield from self.protocol.send(messages.wake_device())
+        yield from self.protocol.send(messages.register_hid_device(1000, 1000))
         yield from asyncio.sleep(100, loop=self.loop)
 
 
@@ -37,17 +50,17 @@ class MrpPlaying(Playing):
 
     def __init__(self, protocol):
         """Initialize a new MrpPlaying."""
+        from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
         self.protocol = protocol
         self.protocol.add_listener(self, PB.ProtocolMessage.SET_STATE_MESSAGE)
-        self._message = None
+        base = SetStateMessage.SetStateMessage
+        self._nowplaying = base.NowPlayingInfoMessage()
 
+    @asyncio.coroutine
     def handle_message(self, message):
-        self._message = message
-
-    def _nowplaying(self):
         from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
         index = SetStateMessage.setStateMessage
-        return self._message.Extensions[index].nowPlayingInfo
+        self._nowplaying = message.Extensions[index].nowPlayingInfo
 
     @property
     def media_type(self):
@@ -62,7 +75,8 @@ class MrpPlaying(Playing):
     @property
     def title(self):
         """Title of the current media, e.g. movie or song name."""
-        return self._nowplaying().title
+        if self._nowplaying:
+            return self._nowplaying.title
 
     @property
     def artist(self):
@@ -77,14 +91,16 @@ class MrpPlaying(Playing):
     @property
     def total_time(self):
         """Total play time in seconds."""
-        return int(self._nowplaying().duration)
+        if self._nowplaying:
+            return int(self._nowplaying.duration)
 
     @property
     def position(self):
         """Position in the playing media (seconds)."""
         # timestamp contains time of the latest "play" action, so it must be
         # used to calculate the correct time here: elapsed + (now - timestamp)
-        return int(self._nowplaying().elapsedTime)
+        if self._nowplaying:
+            return int(self._nowplaying.elapsedTime)
 
     @property
     def shuffle(self):
@@ -184,7 +200,7 @@ class MrpProtocol(object):
         self._initial_message_sent = False
 
     def add_listener(self, listener, message_type):
-        if type not in self._listeners:
+        if message_type not in self._listeners:
             self._listeners[message_type] = []
 
         self._listeners[message_type].append(listener)
@@ -317,19 +333,21 @@ class MrpProtocol(object):
                     self._outstanding[identifier][1] = resp
                     self._outstanding[identifier][0].release()
                 else:
-                    self._dispatch(resp)
+                    try:
+                        yield from self._dispatch(resp)
+                    except Exception as ex:
+                        _LOGGER.exception('fail to dispatch')
 
             except asyncio.CancelledError:
                 break
 
+    # TODO: dispatching should maybe not be a coroutine?
+    @asyncio.coroutine
     def _dispatch(self, message):
-        type = message.type
-
-        _LOGGER.debug('Dispatching message with type %d to listeners', type)
-
-        if type in self._listeners:
-            for listener in self._listeners[type]:
-                listener.handle_message(message)
+        for listener in self._listeners.get(message.type, []):
+            _LOGGER.debug('Dispatching message %d to %s',
+                          message.type, listener.__class__)
+            yield from listener.handle_message(message)
 
 
 class MrpAppleTV(AppleTV):

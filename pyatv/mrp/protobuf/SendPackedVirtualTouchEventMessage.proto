@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+import "pyatv/mrp/protobuf/ProtocolMessage.proto";
+import "pyatv/mrp/protobuf/VirtualTouchEvent.proto";
+
+extend ProtocolMessage {
+  optional SendPackedVirtualTouchEventMessage sendPackedVirtualTouchEventMessage = 47;
+}
+
+message SendPackedVirtualTouchEventMessage {
+
+  // Corresponds to "phase" in data
+  enum Phase {
+    Began = 1;
+    Moved = 2;
+    Stationary = 3;
+    Ended = 4;
+    Cancelled = 5;
+  }
+
+  optional bytes data = 1;
+}

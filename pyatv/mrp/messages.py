@@ -10,6 +10,12 @@ from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB  # noqa
 from pyatv.mrp.protobuf import DeviceInfoMessage_pb2 as DeviceInfoMessage
 from pyatv.mrp.protobuf import CryptoPairingMessage_pb2 as CryptoPairingMessage
 from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
+from pyatv.mrp.protobuf import TransactionMessage_pb2 as TransactionMessage
+from pyatv.mrp.protobuf import VolumeControlAvailability_pb2 as VolumeControlAvailabilityMessage  # noqa
+from pyatv.mrp.protobuf import SetArtworkMessage_pb2 as SetArtworkMessage
+from pyatv.mrp.protobuf import SendPackedVirtualTouchEventMessage_pb2 as SendPackedVirtualTouchEventMessage  # noqa
+from pyatv.mrp.protobuf import RegisterHIDDeviceMessage_pb2 as RegisterHIDDeviceMessage
+from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
 
 
 def create(message_type, priority=0):
@@ -57,4 +63,37 @@ def client_updates_config(artwork=True, now_playing=True,
     config.nowPlayingUpdates = now_playing
     config.volumeUpdates = volume
     config.keyboardUpdates = keyboard
+    return message
+
+def wake_device():
+    """Create a new WAKE_DEVICE_MESSAGE."""
+    return create(PB.ProtocolMessage.WAKE_DEVICE_MESSAGE)
+
+def register_hid_device(screen_width, screen_height,
+                        absolute=False, integrated_display=False):
+    """Create a new REGISTER_HID_DEVICE_MESSAGE."""
+    message = create(PB.ProtocolMessage.REGISTER_HID_DEVICE_MESSAGE)
+    ext = RegisterHIDDeviceMessage.registerHIDDeviceMessage
+    descriptor = message.Extensions[ext].deviceDescriptor
+    descriptor.absolute = 1 if absolute else 0
+    descriptor.integratedDisplay = 1 if integrated_display else 0
+    descriptor.screenSizeWidth = screen_width
+    descriptor.screenSizeHeight = screen_height
+    return message
+
+def send_packed_virtual_touch_event(x, y, phase, deviceID, finger):
+    """Create a new WAKE_DEVICE_MESSAGE."""
+    message = create(PB.ProtocolMessage.SEND_PACKED_VIRTUAL_TOUCH_EVENT_MESSAGE)
+    ext = SendPackedVirtualTouchEventMessage.sendPackedVirtualTouchEventMessage
+    event = message.Extensions[ext]
+
+    # The packed version of VirtualTouchEvent contains X, Y, phase, deviceID
+    # and finger stored as a byte array. Each value is written as 16bit little
+    # endian.
+    event.data = x.to_bytes(2, byteorder='little')
+    event.data += y.to_bytes(2, byteorder='little')
+    event.data += phase.to_bytes(2, byteorder='little')
+    event.data += deviceID.to_bytes(2, byteorder='little')
+    event.data += finger.to_bytes(2, byteorder='little')
+
     return message

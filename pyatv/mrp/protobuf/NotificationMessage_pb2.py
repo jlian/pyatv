@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/NotificationMessage.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n,pyatv/mrp/protobuf/NotificationMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"+\n\x13NotificationMessage\x12\x14\n\x0cnotification\x18\x01 \x03(\t:C\n\x13notificationMessage\x12\x10.ProtocolMessage\x18\x10 \x01(\x0b\x32\x14.NotificationMessage')
+  serialized_pb=_b('\n,pyatv/mrp/protobuf/NotificationMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"=\n\x13NotificationMessage\x12\x14\n\x0cnotification\x18\x01 \x03(\t\x12\x10\n\x08userInfo\x18\x02 \x03(\x0c:C\n\x13notificationMessage\x12\x10.ProtocolMessage\x18\x10 \x01(\x0b\x32\x14.NotificationMessage')
   ,
   dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,])
 
@@ -49,6 +49,13 @@ _NOTIFICATIONMESSAGE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='userInfo', full_name='NotificationMessage.userInfo', index=1,
+      number=2, type=12, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -62,7 +69,7 @@ _NOTIFICATIONMESSAGE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=90,
-  serialized_end=133,
+  serialized_end=151,
 )
 
 DESCRIPTOR.message_types_by_name['NotificationMessage'] = _NOTIFICATIONMESSAGE

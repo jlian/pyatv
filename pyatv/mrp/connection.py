@@ -45,7 +45,7 @@ class MrpConnection:
     def connect(self):
         """Connect to device."""
         self._reader, self._writer = yield from asyncio.open_connection(
-            self.host, self.port, loop=self.loop)
+            self.host, self.port, loop=self.loop)  # TODO: timeout
 
     def close(self):
         """Close connection to device."""
@@ -71,7 +71,7 @@ class MrpConnection:
         data = yield from self._reader.read(1024)
         if data == b'':
             _LOGGER.debug('Device closed the connection')
-            return b''
+            raise Exception('device closed the connection')  # TODO: other exception
 
         # A message might be split over several reads, so we store a buffer and
         # try to decode messages from that buffer

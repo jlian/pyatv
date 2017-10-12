@@ -9,13 +9,24 @@ extend ProtocolMessage {
 message SetStateMessage {
 
   message NowPlayingInfoMessage {
+    optional string album = 1;
+    optional string artist = 2;
     optional double duration = 3;
     optional double elapsedTime = 4;
-    optional double playbackRate = 5; // TODO: not parsed correctly?
+    optional float playbackRate = 5;
+    optional int32 repeatMode = 6;
+    optional int32 shuffleMode = 7;
     optional double timestamp = 8;
     optional string title = 9;
     optional uint64 uniqueIdentifier = 10;
-    optional uint32 isAlwaysLive = 17;
+    optional bool isExplicitTrack = 11;
+    optional bool isMusicApp = 12;
+    optional int64 radioStationIdentifier = 13;
+    optional string radioStationHash = 14;
+    optional string radioStationName = 15;
+    optional bytes artworkDataDigest = 16;
+    optional bool isAlwaysLive = 17;
+    optional bool isAdvertisement = 18;
   }
 
   enum SupportedCommand {
@@ -38,6 +49,11 @@ message SetStateMessage {
     PlayItemInPlaybackQueue = 57;
   }
 
+  enum PlaybackState {
+    Playing = 1;
+    Paused = 2;
+  }
+
   message SupportedCommandMessage {
     required SupportedCommand command = 1;
     required bool enabled = 2;
@@ -54,5 +70,5 @@ message SetStateMessage {
   optional SupportedCommands supportedCommands = 2;
   optional string displayID = 4;
   optional string displayName = 5;
-  optional int32 playbackState = 6;
+  optional PlaybackState playbackState = 6;
 }
