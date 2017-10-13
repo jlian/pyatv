@@ -3,6 +3,7 @@
 import uuid
 import logging
 import asyncio
+import datetime
 
 from collections import namedtuple
 
@@ -36,8 +37,6 @@ _KEY_LOOKUP = {
 
     # 'mic': [12, 0x04]  # Siri
 }
-
-#yield from self.protocol.send(messages.client_updates_config())
 
 
 class MrpRemoteControl(RemoteControl):
@@ -151,29 +150,38 @@ class MrpPlaying(Playing):
     @property
     def title(self):
         """Title of the current media, e.g. movie or song name."""
-        return self._setstate.nowPlayingInfo.title
+        return self._setstate.nowPlayingInfo.title or None
 
     @property
     def artist(self):
         """Artist of the currently playing song."""
-        return self._setstate.nowPlayingInfo.artist
+        return self._setstate.nowPlayingInfo.artist or None
 
     @property
     def album(self):
         """Album of the currently playing song."""
-        return self._setstate.nowPlayingInfo.album
+        return self._setstate.nowPlayingInfo.album or None
 
     @property
     def total_time(self):
         """Total play time in seconds."""
-        return int(self._setstate.nowPlayingInfo.duration)
+        return int(self._setstate.nowPlayingInfo.duration) or None
 
     @property
     def position(self):
         """Position in the playing media (seconds)."""
-        # timestamp contains time of the latest "play" action, so it must be
-        # used to calculate the correct time here: elapsed + (now - timestamp)
-        return int(self._setstate.nowPlayingInfo.elapsedTime)
+        # TODO: ugly PoC for now and probably not 100% correct
+        timestamp = int(self._setstate.nowPlayingInfo.timestamp)
+        if timestamp == 0:
+            return 0
+
+        now_utc = datetime.datetime.utcnow()
+        ts = datetime.datetime(2001,1,1,0,0) + \
+            datetime.timedelta(seconds=timestamp)
+        diff = (now_utc - ts).total_seconds()
+        base = self._setstate.nowPlayingInfo.elapsedTime
+        extra = diff if int(self._setstate.nowPlayingInfo.playbackRate) == 0 else 0
+        return int(base + extra)
 
     @property
     def shuffle(self):
@@ -216,7 +224,57 @@ class MrpMetadata(Metadata):
 class MrpPushUpdater(PushUpdater):
     """Implementation of API for handling push update from an Apple TV."""
 
-    pass
+    def __init__(self, loop, metadata, protocol):
+        """Initialize a new MrpPushUpdater instance."""
+        self.loop = loop
+        self.metadata = metadata
+        self.protocol = protocol
+        self.protocol.add_listener(
+            self._handle_update, PB.ProtocolMessage.SET_STATE_MESSAGE)
+        self.protocol.add_listener(
+            self._handle_update, PB.ProtocolMessage.TRANSACTION_MESSAGE)
+        self._enabled = False
+        self.__listener = None
+
+    @property
+    def listener(self):
+        """Receiver of push updates."""
+        return self.__listener
+
+    @listener.setter
+    def listener(self, listener):
+        """Change active listener to push updates.
+
+        Will throw AsyncUpdaterRunningError if push updates is enabled.
+        """
+        if self._enabled:
+            raise exceptions.AsyncUpdaterRunningError
+
+        self.__listener = listener
+
+    def start(self, initial_delay=0):
+        """Wait for push updates from device.
+
+        Will throw NoAsyncListenerError if no listner has been set.
+        """
+        if self.listener is None:
+            raise exceptions.NoAsyncListenerError
+        elif self._enabled:
+            return
+
+        self._enabled = True
+
+    def stop(self):
+        """No longer wait for push updates."""
+        self._enabled = False
+
+    @asyncio.coroutine
+    def _handle_update(self, message, data):
+        playstatus = yield from self.metadata.playing()
+
+        if self._enabled:
+            self.loop.call_soon(
+                self.listener.playstatus_update, self, playstatus)
 
 
 class MrpPairingHandler(PairingHandler):
@@ -297,6 +355,9 @@ class MrpProtocol(object):
     @asyncio.coroutine
     def start(self):
         """Connect to device and listen to incoming messages."""
+        if self.connection.connected:
+            return
+
         yield from self.connection.connect()
 
         # TODO: refactor and share code with dmap.apple_tv.DmapPushUpdater
@@ -482,7 +543,8 @@ class MrpAppleTV(AppleTV):
 
         self._atv_remote = MrpRemoteControl(loop, self._protocol)
         self._atv_metadata = MrpMetadata(self._protocol)
-        self._atv_push_updater = MrpPushUpdater()
+        self._atv_push_updater = MrpPushUpdater(
+            loop, self._atv_metadata, self._protocol)
         self._atv_pairing = MrpPairingHandler(
             loop, self._protocol, self._srp, self._service)
         self._airplay = airplay

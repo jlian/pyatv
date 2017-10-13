@@ -335,8 +335,10 @@ class DmapPushUpdater(PushUpdater):
 
         Will throw NoAsyncListenerError if no listner has been set.
         """
-        if self._future is not None:
+        if self.__listener is not None:
             raise exceptions.NoAsyncListenerError
+        elif self._future is not None:
+            return
 
         # If ensure_future, use that instead of async
         if hasattr(asyncio, 'ensure_future'):

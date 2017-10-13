@@ -138,6 +138,7 @@ class DeviceCommands:
         print('Press ENTER to stop')
 
         self.atv.push_updater.start()
+        yield from self.atv.login()
         yield from self.loop.run_in_executor(None, sys.stdin.readline)
         self.atv.push_updater.stop()
         return 0
@@ -412,8 +413,7 @@ def _handle_commands(args, loop):
             args.port, device_credentials=args.device_credentials))
 
     atv = pyatv.connect_to_apple_tv(details, loop, protocol=args.protocol)
-    if not atv.push_updater:  # TODO: not implemented in MRP yet
-        atv.push_updater.listener = PushListener()
+    atv.push_updater.listener = PushListener()
 
     try:
         if args.airplay_credentials is not None:
