@@ -1,5 +1,7 @@
 """Helper code for dealing with protobuf messages."""
 
+import binascii
+
 from pyatv.mrp import tlv8
 
 # Import all supported messages here, otherwise they will not be decoded
@@ -16,6 +18,7 @@ from pyatv.mrp.protobuf import SetArtworkMessage_pb2 as SetArtworkMessage
 from pyatv.mrp.protobuf import SendPackedVirtualTouchEventMessage_pb2 as SendPackedVirtualTouchEventMessage  # noqa
 from pyatv.mrp.protobuf import RegisterHIDDeviceMessage_pb2 as RegisterHIDDeviceMessage
 from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
+from pyatv.mrp.protobuf import SendHIDEventMessage_pb2 as SendHIDEventMessage
 
 
 def create(message_type, priority=0):
@@ -89,11 +92,36 @@ def send_packed_virtual_touch_event(x, y, phase, deviceID, finger):
 
     # The packed version of VirtualTouchEvent contains X, Y, phase, deviceID
     # and finger stored as a byte array. Each value is written as 16bit little
-    # endian.
+    # endian integers.
     event.data = x.to_bytes(2, byteorder='little')
     event.data += y.to_bytes(2, byteorder='little')
     event.data += phase.to_bytes(2, byteorder='little')
     event.data += deviceID.to_bytes(2, byteorder='little')
     event.data += finger.to_bytes(2, byteorder='little')
+
+    return message
+
+def send_hid_event(use_page, usage, down):
+    """Create a new SEND_HID_EVENT_MESSAGE."""
+    message = create(PB.ProtocolMessage.SEND_HID_EVENT_MESSAGE)
+    ext = SendHIDEventMessage.sendHIDEventMessage
+    event = message.Extensions[ext]
+
+    # TODO: This should be generated somehow. I guess it's mach AbsoluteTime
+    # which is tricky to generate. The device does not seem to care much about
+    # the value though, so hardcode something here.
+    abstime = binascii.unhexlify(b'438922cf08020000')
+
+    data = use_page.to_bytes(2, byteorder='big')
+    data += usage.to_bytes(2, byteorder='big')
+    data += (1 if down else 0).to_bytes(2, byteorder='big')
+
+    # This is the format that the device expects. Some day I might take some
+    # time to decode it for real, but this is fine for now.
+    event.hidEventData = abstime + \
+        binascii.unhexlify(b'00000000000000000100000000000000020' +
+                           b'00000200000000300000001000000000000') + \
+        data + \
+        binascii.unhexlify(b'0000000000000001000000')
 
     return message

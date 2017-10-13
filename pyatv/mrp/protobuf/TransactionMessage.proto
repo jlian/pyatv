@@ -70,7 +70,7 @@ message ContentItemMetadata {
   optional string seriesName = 63;
   optional int32 mediaType = 64;
   optional int32 mediaSubType = 65;
-  optional bytes nowPlayingInfo = 67; // unkown
+  optional bytes nowPlayingInfo = 67; // unknown
 }
 
 message ContentItem {

@@ -49,7 +49,8 @@ class MrpConnection:
 
     def close(self):
         """Close connection to device."""
-        self._writer.close()
+        if self._writer:
+            self._writer.close()
         self._chacha = None
 
     def send(self, message):

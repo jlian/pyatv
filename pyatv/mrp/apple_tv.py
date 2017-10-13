@@ -15,6 +15,27 @@ from pyatv.interface import (AppleTV, RemoteControl, Metadata,
 
 _LOGGER = logging.getLogger(__name__)
 
+# Source: https://github.com/Daij-Djan/DDHidLib/blob/master/usb_hid_usages.txt
+_KEY_LOOKUP = {
+    # name: [usage_page, usage]
+    'up': [1, 0x8C],
+    'down': [1, 0x8D],
+    'left': [1, 0x8B],
+    'right': [1, 0x8A],
+    'play': [12, 0xB0],
+    'pause': [12, 0xB1],
+    'stop': [12, 0xB7],
+    'next': [12, 0xB5],
+    'previous': [12, 0xB6],
+    'select': [1, 0x89],
+    'menu': [1, 0x86],
+    'top_menu': [12, 0x60],
+
+    # 'mic': [12, 0x04]  # Siri
+}
+
+#yield from self.protocol.send(messages.client_updates_config())
+
 
 class MrpRemoteControl(RemoteControl):
     """Implementation of API for controlling an Apple TV."""
@@ -23,26 +44,79 @@ class MrpRemoteControl(RemoteControl):
         """Initialize a new MrpRemoteControl."""
         self.loop = loop
         self.protocol = protocol
-        self.protocol.add_listener(self, PB.ProtocolMessage.REGISTER_HID_DEVICE_RESULT_MESSAGE)
 
     @asyncio.coroutine
-    def handle_message(self, message):
-        from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
-        ext = RegisterHIDDeviceResultMessage.registerHIDDeviceResultMessage
-        res = message.Extensions[ext]
+    def _press_key(self, key):
+        lookup = _KEY_LOOKUP.get(key, None)
+        if lookup:
+            yield from self.protocol.send(
+                messages.send_hid_event(lookup[0], lookup[1], True))
+            yield from self.protocol.send(
+                messages.send_hid_event(lookup[0], lookup[1], False))
+        else:
+            raise Exception('unknown key: ' + key)
 
-        yield from self.protocol.send(messages.send_packed_virtual_touch_event(100, 0, 1, res.deviceIdentifier, 1))
-        yield from self.protocol.send(messages.send_packed_virtual_touch_event(200, 250, 2, res.deviceIdentifier, 1))
-        yield from self.protocol.send(messages.send_packed_virtual_touch_event(300, 500, 4, res.deviceIdentifier, 1))
+    def up(self):
+        """Press key up."""
+        return self._press_key('up')
 
-    @asyncio.coroutine
+    def down(self):
+        """Press key down."""
+        return self._press_key('down')
+
+    def left(self):
+        """Press key left."""
+        return self._press_key('left')
+
+    def right(self):
+        """Press key right."""
+        return self._press_key('right')
+
+    def play(self):
+        """Press key play."""
+        return self._press_key('play')
+
+    def pause(self):
+        """Press key play."""
+        return self._press_key('pause')
+
     def stop(self):
         """Press key stop."""
-        # TODO: just some sample code at the moment
-        yield from self.protocol.send(messages.client_updates_config())
-        yield from self.protocol.send(messages.wake_device())
-        yield from self.protocol.send(messages.register_hid_device(1000, 1000))
-        yield from asyncio.sleep(100, loop=self.loop)
+        return self._press_key('stop')
+
+    def next(self):
+        """Press key next."""
+        return self._press_key('next')
+
+    def previous(self):
+        """Press key previous."""
+        return self._press_key('previous')
+
+    def select(self):
+        """Press key select."""
+        return self._press_key('select')
+
+    def menu(self):
+        """Press key menu."""
+        return self._press_key('menu')
+
+    def top_menu(self):
+        """Go to main menu (long press menu)."""
+        return self._press_key('top_menu')
+
+    def set_position(self, pos):
+        """Seek in the current playing media."""
+        raise exceptions.NotSupportedError
+
+    @asyncio.coroutine
+    def set_shuffle(self, is_on):
+        """Change shuffle mode to on or off."""
+        raise exceptions.NotSupportedError
+
+    @asyncio.coroutine
+    def set_repeat(self, repeat_mode):
+        """Change repeat mode."""
+        raise exceptions.NotSupportedError
 
 
 class MrpPlaying(Playing):
