@@ -103,6 +103,24 @@ class DeviceCommands:
         self.args = args
 
     @asyncio.coroutine
+    def cli(self):
+        """Enter commands in a simple CLI."""
+        print('Enter commands and press enter')
+        print('Type help for help and exit to quit')
+
+        while True:
+            command = yield from _read_input(self.loop, 'pyatv> ')
+            if command.lower() == 'exit':
+                break
+            elif command == 'cli':
+                print('Command not availble here')
+                continue
+
+            yield from _handle_device_command(
+                self.args, command, self.atv, self.loop)
+
+
+    @asyncio.coroutine
     def artwork_save(self):
         """Download artwork and save it to artwork.png."""
         artwork = yield from self.atv.metadata.artwork()
@@ -444,7 +462,7 @@ def _handle_device_command(args, cmd, atv, loop):
         return (yield from _exec_command(
             atv.airplay, cmd, True, *cmd_args))
 
-    logging.error('Unknown command: %s', args.command[0])
+    logging.error('Unknown command: %s', cmd)
     return 1
 
 
