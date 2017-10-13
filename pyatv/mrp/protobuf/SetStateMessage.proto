@@ -55,11 +55,26 @@ message SetStateMessage {
   }
 
   message SupportedCommandMessage {
-    required SupportedCommand command = 1;
-    required bool enabled = 2;
-    optional bool canScrub = 16;
-    // optional ??? preferredInterval = ???;
-    // optional ??? supportedRate = ???;
+    optional SupportedCommand command = 1;
+    optional bool enabled = 2;
+    optional bool active = 3;
+    repeated double preferredIntervals = 4;
+    optional string localizedTitle = 5;
+    optional float minimumRating = 6;
+    optional float maximumRating = 7;
+    repeated float supportedRates = 8;
+    optional string localizedShortTitle = 9;
+    optional int32 repeatMode = 10;
+    optional int32 shuffleMode = 11;
+    optional int32 presentationStyle = 12;
+    optional int32 skipInterval = 13;
+    optional int32 numAvailableSkips = 14;
+    optional int32 skipFrequency = 15;
+    optional int32 canScrub = 16;
+    repeated int32 supportedPlaybackQueueTypes = 17;
+    repeated string supportedCustomQueueIdentifiers = 18;
+    optional int32 supportedInsertionPositions = 19;
+    optional bool supportsSharedQueue = 20;
   }
 
   message SupportedCommands {

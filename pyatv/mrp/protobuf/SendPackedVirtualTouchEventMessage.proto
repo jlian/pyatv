@@ -1,7 +1,6 @@
 syntax = "proto2";
 
 import "pyatv/mrp/protobuf/ProtocolMessage.proto";
-import "pyatv/mrp/protobuf/VirtualTouchEvent.proto";
 
 extend ProtocolMessage {
   optional SendPackedVirtualTouchEventMessage sendPackedVirtualTouchEventMessage = 47;
@@ -18,5 +17,8 @@ message SendPackedVirtualTouchEventMessage {
     Cancelled = 5;
   }
 
+  // The packed version of VirtualTouchEvent contains X, Y, phase, deviceID
+  // and finger stored as a byte array. Each value is written as 16bit little
+  // endian integers.
   optional bytes data = 1;
 }

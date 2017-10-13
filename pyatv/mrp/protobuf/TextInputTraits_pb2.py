@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/TextInputTraits.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n(pyatv/mrp/protobuf/TextInputTraits.proto\"\xe2\x03\n\x0fTextInputTraits\"L\n\x16\x41utocapitalizationType\x12\x08\n\x04NONE\x10\x00\x12\t\n\x05WORDS\x10\x01\x12\r\n\tSENTENCES\x10\x02\x12\x0e\n\nCHARACTERS\x10\x03\"\xd6\x01\n\x0cKeyboardType\x12\x19\n\x15KEYBOARD_TYPE_DEFAULT\x10\x00\x12\x11\n\rASCII_CAPABLE\x10\x01\x12\x1b\n\x17NUMBERS_AND_PUNCTUATION\x10\x02\x12\x07\n\x03URL\x10\x03\x12\x0e\n\nNUMBER_PAD\x10\x04\x12\r\n\tPHONE_PAD\x10\x05\x12\x12\n\x0eNAME_PHONE_PAD\x10\x06\x12\x11\n\rEMAIL_ADDRESS\x10\x07\x12\x0f\n\x0b\x44\x45\x43IMAL_PAD\x10\x08\x12\x0b\n\x07TWITTER\x10\t\x12\x0e\n\nWEB_SEARCH\x10\n\"\xa7\x01\n\rReturnKeyType\x12\x16\n\x12RETURN_KEY_DEFAULT\x10\x00\x12\x06\n\x02GO\x10\x01\x12\n\n\x06GOOGLE\x10\x02\x12\x08\n\x04JOIN\x10\x03\x12\x08\n\x04NEXT\x10\x04\x12\t\n\x05ROUTE\x10\x05\x12\n\n\x06SEARCH\x10\x06\x12\x08\n\x04SEND\x10\x07\x12\t\n\x05YAHOO\x10\x08\x12\x08\n\x04\x44ONE\x10\t\x12\x12\n\x0e\x45MERGENCY_CALL\x10\n\x12\x0c\n\x08\x43ONTINUE\x10\x0b')
+  serialized_pb=_b('\n(pyatv/mrp/protobuf/TextInputTraits.proto\"\xe6\x06\n\x0fTextInputTraits\x12G\n\x16\x61utocapitalizationType\x18\x01 \x01(\x0e\x32\'.TextInputTraits.AutocapitalizationType\x12\x33\n\x0ckeyboardType\x18\x02 \x01(\x0e\x32\x1d.TextInputTraits.KeyboardType\x12\x35\n\rreturnKeyType\x18\x03 \x01(\x0e\x32\x1e.TextInputTraits.ReturnKeyType\x12\x16\n\x0e\x61utocorrection\x18\x04 \x01(\x08\x12\x15\n\rspellchecking\x18\x05 \x01(\x08\x12%\n\x1d\x65nablesReturnKeyAutomatically\x18\x06 \x01(\x08\x12\x17\n\x0fsecureTextEntry\x18\x07 \x01(\x08\x12\x1e\n\x16validTextRangeLocation\x18\x08 \x01(\x04\x12\x1c\n\x14validTextRangeLength\x18\t \x01(\x04\x12 \n\x18PINEntrySeparatorIndexes\x18\n \x03(\x04\"L\n\x16\x41utocapitalizationType\x12\x08\n\x04NONE\x10\x00\x12\t\n\x05WORDS\x10\x01\x12\r\n\tSENTENCES\x10\x02\x12\x0e\n\nCHARACTERS\x10\x03\"\xd6\x01\n\x0cKeyboardType\x12\x19\n\x15KEYBOARD_TYPE_DEFAULT\x10\x00\x12\x11\n\rASCII_CAPABLE\x10\x01\x12\x1b\n\x17NUMBERS_AND_PUNCTUATION\x10\x02\x12\x07\n\x03URL\x10\x03\x12\x0e\n\nNUMBER_PAD\x10\x04\x12\r\n\tPHONE_PAD\x10\x05\x12\x12\n\x0eNAME_PHONE_PAD\x10\x06\x12\x11\n\rEMAIL_ADDRESS\x10\x07\x12\x0f\n\x0b\x44\x45\x43IMAL_PAD\x10\x08\x12\x0b\n\x07TWITTER\x10\t\x12\x0e\n\nWEB_SEARCH\x10\n\"\xa7\x01\n\rReturnKeyType\x12\x16\n\x12RETURN_KEY_DEFAULT\x10\x00\x12\x06\n\x02GO\x10\x01\x12\n\n\x06GOOGLE\x10\x02\x12\x08\n\x04JOIN\x10\x03\x12\x08\n\x04NEXT\x10\x04\x12\t\n\x05ROUTE\x10\x05\x12\n\n\x06SEARCH\x10\x06\x12\x08\n\x04SEND\x10\x07\x12\t\n\x05YAHOO\x10\x08\x12\x08\n\x04\x44ONE\x10\t\x12\x12\n\x0e\x45MERGENCY_CALL\x10\n\x12\x0c\n\x08\x43ONTINUE\x10\x0b')
 )
 
 
@@ -49,8 +49,8 @@ _TEXTINPUTTRAITS_AUTOCAPITALIZATIONTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=64,
-  serialized_end=140,
+  serialized_start=452,
+  serialized_end=528,
 )
 _sym_db.RegisterEnumDescriptor(_TEXTINPUTTRAITS_AUTOCAPITALIZATIONTYPE)
 
@@ -107,8 +107,8 @@ _TEXTINPUTTRAITS_KEYBOARDTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=143,
-  serialized_end=357,
+  serialized_start=531,
+  serialized_end=745,
 )
 _sym_db.RegisterEnumDescriptor(_TEXTINPUTTRAITS_KEYBOARDTYPE)
 
@@ -169,8 +169,8 @@ _TEXTINPUTTRAITS_RETURNKEYTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=360,
-  serialized_end=527,
+  serialized_start=748,
+  serialized_end=915,
 )
 _sym_db.RegisterEnumDescriptor(_TEXTINPUTTRAITS_RETURNKEYTYPE)
 
@@ -182,6 +182,76 @@ _TEXTINPUTTRAITS = _descriptor.Descriptor(
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
+    _descriptor.FieldDescriptor(
+      name='autocapitalizationType', full_name='TextInputTraits.autocapitalizationType', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='keyboardType', full_name='TextInputTraits.keyboardType', index=1,
+      number=2, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='returnKeyType', full_name='TextInputTraits.returnKeyType', index=2,
+      number=3, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='autocorrection', full_name='TextInputTraits.autocorrection', index=3,
+      number=4, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='spellchecking', full_name='TextInputTraits.spellchecking', index=4,
+      number=5, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='enablesReturnKeyAutomatically', full_name='TextInputTraits.enablesReturnKeyAutomatically', index=5,
+      number=6, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='secureTextEntry', full_name='TextInputTraits.secureTextEntry', index=6,
+      number=7, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='validTextRangeLocation', full_name='TextInputTraits.validTextRangeLocation', index=7,
+      number=8, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='validTextRangeLength', full_name='TextInputTraits.validTextRangeLength', index=8,
+      number=9, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='PINEntrySeparatorIndexes', full_name='TextInputTraits.PINEntrySeparatorIndexes', index=9,
+      number=10, type=4, cpp_type=4, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -198,9 +268,12 @@ _TEXTINPUTTRAITS = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=45,
-  serialized_end=527,
+  serialized_end=915,
 )
 
+_TEXTINPUTTRAITS.fields_by_name['autocapitalizationType'].enum_type = _TEXTINPUTTRAITS_AUTOCAPITALIZATIONTYPE
+_TEXTINPUTTRAITS.fields_by_name['keyboardType'].enum_type = _TEXTINPUTTRAITS_KEYBOARDTYPE
+_TEXTINPUTTRAITS.fields_by_name['returnKeyType'].enum_type = _TEXTINPUTTRAITS_RETURNKEYTYPE
 _TEXTINPUTTRAITS_AUTOCAPITALIZATIONTYPE.containing_type = _TEXTINPUTTRAITS
 _TEXTINPUTTRAITS_KEYBOARDTYPE.containing_type = _TEXTINPUTTRAITS
 _TEXTINPUTTRAITS_RETURNKEYTYPE.containing_type = _TEXTINPUTTRAITS

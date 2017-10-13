@@ -14,16 +14,15 @@ _sym_db = _symbol_database.Default()
 
 
 from pyatv.mrp.protobuf import ProtocolMessage_pb2 as pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2
-from pyatv.mrp.protobuf import VirtualTouchEvent_pb2 as pyatv_dot_mrp_dot_protobuf_dot_VirtualTouchEvent__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/SendPackedVirtualTouchEventMessage.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n;pyatv/mrp/protobuf/SendPackedVirtualTouchEventMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\x1a*pyatv/mrp/protobuf/VirtualTouchEvent.proto\"2\n\"SendPackedVirtualTouchEventMessage\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c:a\n\"sendPackedVirtualTouchEventMessage\x12\x10.ProtocolMessage\x18/ \x01(\x0b\x32#.SendPackedVirtualTouchEventMessage')
+  serialized_pb=_b('\n;pyatv/mrp/protobuf/SendPackedVirtualTouchEventMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"{\n\"SendPackedVirtualTouchEventMessage\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"G\n\x05Phase\x12\t\n\x05\x42\x65gan\x10\x01\x12\t\n\x05Moved\x10\x02\x12\x0e\n\nStationary\x10\x03\x12\t\n\x05\x45nded\x10\x04\x12\r\n\tCancelled\x10\x05:a\n\"sendPackedVirtualTouchEventMessage\x12\x10.ProtocolMessage\x18/ \x01(\x0b\x32#.SendPackedVirtualTouchEventMessage')
   ,
-  dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,pyatv_dot_mrp_dot_protobuf_dot_VirtualTouchEvent__pb2.DESCRIPTOR,])
+  dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,])
 
 
 SENDPACKEDVIRTUALTOUCHEVENTMESSAGE_FIELD_NUMBER = 47
@@ -34,6 +33,40 @@ sendPackedVirtualTouchEventMessage = _descriptor.FieldDescriptor(
   message_type=None, enum_type=None, containing_type=None,
   is_extension=True, extension_scope=None,
   options=None)
+
+_SENDPACKEDVIRTUALTOUCHEVENTMESSAGE_PHASE = _descriptor.EnumDescriptor(
+  name='Phase',
+  full_name='SendPackedVirtualTouchEventMessage.Phase',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='Began', index=0, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Moved', index=1, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Stationary', index=2, number=3,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Ended', index=3, number=4,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Cancelled', index=4, number=5,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=157,
+  serialized_end=228,
+)
+_sym_db.RegisterEnumDescriptor(_SENDPACKEDVIRTUALTOUCHEVENTMESSAGE_PHASE)
 
 
 _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE = _descriptor.Descriptor(
@@ -55,6 +88,7 @@ _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE = _descriptor.Descriptor(
   ],
   nested_types=[],
   enum_types=[
+    _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE_PHASE,
   ],
   options=None,
   is_extendable=False,
@@ -62,10 +96,11 @@ _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=149,
-  serialized_end=199,
+  serialized_start=105,
+  serialized_end=228,
 )
 
+_SENDPACKEDVIRTUALTOUCHEVENTMESSAGE_PHASE.containing_type = _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE
 DESCRIPTOR.message_types_by_name['SendPackedVirtualTouchEventMessage'] = _SENDPACKEDVIRTUALTOUCHEVENTMESSAGE
 DESCRIPTOR.extensions_by_name['sendPackedVirtualTouchEventMessage'] = sendPackedVirtualTouchEventMessage
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
