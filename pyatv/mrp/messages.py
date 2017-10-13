@@ -19,6 +19,11 @@ from pyatv.mrp.protobuf import SendPackedVirtualTouchEventMessage_pb2 as SendPac
 from pyatv.mrp.protobuf import RegisterHIDDeviceMessage_pb2 as RegisterHIDDeviceMessage
 from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
 from pyatv.mrp.protobuf import SendHIDEventMessage_pb2 as SendHIDEventMessage
+from pyatv.mrp.protobuf import SetConnectionState_pb2 as SetConnectionState
+from pyatv.mrp.protobuf import RegisterForGameControllerEventsMessage_pb2 as RegisterForGameControllerEventsMessage
+from pyatv.mrp.protobuf import SetHiliteModeMessage_pb2 as SetHiliteModeMessage
+from pyatv.mrp.protobuf import RegisterVoiceInputDeviceMessage_pb2 as RegisterVoiceInputDeviceMessage
+from pyatv.mrp.protobuf import RegisterVoiceInputDeviceResponseMessage_pb2 as RegisterVoiceInputDeviceResponseMessage
 
 
 def create(message_type, priority=0):
@@ -43,6 +48,14 @@ def device_information(name, identifier):
     info.applicationBundleIdentifier = 'com.apple.TVRemote'
     info.applicationBundleVersion = '273.12'
     info.protocolVersion = 1
+    return message
+
+
+def set_connection_state():
+    """Create a new SET_CONNECTION_STATE_MESSAGE."""
+    message = create(PB.ProtocolMessage.SET_CONNECTION_STATE_MESSAGE)
+    connection = message.Extensions[SetConnectionState.setConnectionStateMessage]
+    connection.state = SetConnectionState.SetConnectionStateMessage.Connected
     return message
 
 

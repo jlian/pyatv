@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/RegisterForGameControllerEventsMessage.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n?pyatv/mrp/protobuf/RegisterForGameControllerEventsMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"@\n&RegisterForGameControllerEventsMessage\x12\x16\n\x0einputModeFlags\x18\x01 \x01(\x05:i\n&registerForGameControllerEventsMessage\x12\x10.ProtocolMessage\x18\x1b \x01(\x0b\x32\'.RegisterForGameControllerEventsMessage')
+  serialized_pb=_b('\n?pyatv/mrp/protobuf/RegisterForGameControllerEventsMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"\x94\x01\n&RegisterForGameControllerEventsMessage\x12N\n\x0einputModeFlags\x18\x01 \x01(\x0e\x32\x36.RegisterForGameControllerEventsMessage.InputModeFlags\"\x1a\n\x0eInputModeFlags\x12\x08\n\x04None\x10\x00:i\n&registerForGameControllerEventsMessage\x12\x10.ProtocolMessage\x18\x1b \x01(\x0b\x32\'.RegisterForGameControllerEventsMessage')
   ,
   dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,])
 
@@ -34,6 +34,24 @@ registerForGameControllerEventsMessage = _descriptor.FieldDescriptor(
   is_extension=True, extension_scope=None,
   options=None)
 
+_REGISTERFORGAMECONTROLLEREVENTSMESSAGE_INPUTMODEFLAGS = _descriptor.EnumDescriptor(
+  name='InputModeFlags',
+  full_name='RegisterForGameControllerEventsMessage.InputModeFlags',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='None', index=0, number=0,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=232,
+  serialized_end=258,
+)
+_sym_db.RegisterEnumDescriptor(_REGISTERFORGAMECONTROLLEREVENTSMESSAGE_INPUTMODEFLAGS)
+
 
 _REGISTERFORGAMECONTROLLEREVENTSMESSAGE = _descriptor.Descriptor(
   name='RegisterForGameControllerEventsMessage',
@@ -44,7 +62,7 @@ _REGISTERFORGAMECONTROLLEREVENTSMESSAGE = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='inputModeFlags', full_name='RegisterForGameControllerEventsMessage.inputModeFlags', index=0,
-      number=1, type=5, cpp_type=1, label=1,
+      number=1, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -54,6 +72,7 @@ _REGISTERFORGAMECONTROLLEREVENTSMESSAGE = _descriptor.Descriptor(
   ],
   nested_types=[],
   enum_types=[
+    _REGISTERFORGAMECONTROLLEREVENTSMESSAGE_INPUTMODEFLAGS,
   ],
   options=None,
   is_extendable=False,
@@ -61,10 +80,12 @@ _REGISTERFORGAMECONTROLLEREVENTSMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=109,
-  serialized_end=173,
+  serialized_start=110,
+  serialized_end=258,
 )
 
+_REGISTERFORGAMECONTROLLEREVENTSMESSAGE.fields_by_name['inputModeFlags'].enum_type = _REGISTERFORGAMECONTROLLEREVENTSMESSAGE_INPUTMODEFLAGS
+_REGISTERFORGAMECONTROLLEREVENTSMESSAGE_INPUTMODEFLAGS.containing_type = _REGISTERFORGAMECONTROLLEREVENTSMESSAGE
 DESCRIPTOR.message_types_by_name['RegisterForGameControllerEventsMessage'] = _REGISTERFORGAMECONTROLLEREVENTSMESSAGE
 DESCRIPTOR.extensions_by_name['registerForGameControllerEventsMessage'] = registerForGameControllerEventsMessage
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)

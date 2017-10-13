@@ -203,7 +203,7 @@ class MrpMetadata(Metadata):
         self.protocol.add_listener(
             self._handle_set_state, PB.ProtocolMessage.SET_STATE_MESSAGE)
         self._setstate = None
-        self._metadata = None
+        self._metadata = None  # TODO: data from TRANSACTION_MESSAGE
 
     @asyncio.coroutine
     def _handle_set_state(self, message, data):
@@ -217,6 +217,10 @@ class MrpMetadata(Metadata):
         # TODO: This is hack-ish
         if self._setstate is None:
             yield from self.protocol.start()
+
+        # No SET_STATE_MESSAGE received yet, use default
+        if self._setstate is None:
+            return MrpPlaying(SetStateMessage.SetStateMessage(), None)
 
         return MrpPlaying(self._setstate, self._metadata)
 
@@ -270,9 +274,8 @@ class MrpPushUpdater(PushUpdater):
 
     @asyncio.coroutine
     def _handle_update(self, message, data):
-        playstatus = yield from self.metadata.playing()
-
         if self._enabled:
+            playstatus = yield from self.metadata.playing()
             self.loop.call_soon(
                 self.listener.playstatus_update, self, playstatus)
 
@@ -352,6 +355,7 @@ class MrpProtocol(object):
 
         lst[message_type].append(self.Listener(listener, data))
 
+    # TODO: This method is too big for its own good. Must split and clean up.
     @asyncio.coroutine
     def start(self):
         """Connect to device and listen to incoming messages."""
@@ -381,6 +385,9 @@ class MrpProtocol(object):
         yield from self.send_and_receive(msg)
         self._initial_message_sent = True
 
+        # This should be the first message sent after encryption has been enabled
+        yield from self.send(messages.set_connection_state())
+
         # Wait for some stuff to arrive before returning
         semaphore = asyncio.Semaphore(value=0, loop=self.loop)
 
@@ -395,9 +402,10 @@ class MrpProtocol(object):
 
         # Subscribe to updates at this stage
         yield from self.send(messages.client_updates_config())
+        yield from self.send(messages.wake_device())
 
         yield from asyncio.wait_for(
-            semaphore.acquire(), 5, loop=self.loop)
+            semaphore.acquire(), 1, loop=self.loop)
 
     def stop(self):
         """Disconnect from device."""
