@@ -4,6 +4,8 @@ import uuid
 import logging
 import asyncio
 
+from collections import namedtuple
+
 from pyatv import (const, exceptions)
 from pyatv.mrp import messages
 from pyatv.mrp.srp import (Credentials, SRPAuthHandler)
@@ -12,6 +14,7 @@ from pyatv.mrp.pairing import (MrpPairingProcedure, MrpPairingVerifier)
 from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
                              Playing, PushUpdater, PairingHandler)
+from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,19 +125,10 @@ class MrpRemoteControl(RemoteControl):
 class MrpPlaying(Playing):
     """Implementation of API for retrieving what is playing."""
 
-    def __init__(self, protocol):
+    def __init__(self, setstate, metadata):
         """Initialize a new MrpPlaying."""
-        from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
-        self.protocol = protocol
-        self.protocol.add_listener(self, PB.ProtocolMessage.SET_STATE_MESSAGE)
-        base = SetStateMessage.SetStateMessage
-        self._nowplaying = base.NowPlayingInfoMessage()
-
-    @asyncio.coroutine
-    def handle_message(self, message):
-        from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
-        index = SetStateMessage.setStateMessage
-        self._nowplaying = message.Extensions[index].nowPlayingInfo
+        self._setstate = setstate
+        self._metadata = metadata
 
     @property
     def media_type(self):
@@ -144,37 +138,42 @@ class MrpPlaying(Playing):
     @property
     def play_state(self):
         """Play state, e.g. playing or paused."""
-        return const.PLAY_STATE_PLAYING  # TODO: just prototype stuff...
+        # TODO: extract to a convert module
+        state = self._setstate.playbackState
+        if state == 1:
+            return const.PLAY_STATE_PLAYING
+        elif state == 2:
+            return const.PLAY_STATE_PAUSED
+        else:
+            raise exceptions.UnknownPlayState(
+                'Unknown playstate: ' + str(state))
 
     @property
     def title(self):
         """Title of the current media, e.g. movie or song name."""
-        if self._nowplaying:
-            return self._nowplaying.title
+        return self._setstate.nowPlayingInfo.title
 
     @property
     def artist(self):
         """Artist of the currently playing song."""
-        return None
+        return self._setstate.nowPlayingInfo.artist
 
     @property
     def album(self):
         """Album of the currently playing song."""
-        return None
+        return self._setstate.nowPlayingInfo.album
 
     @property
     def total_time(self):
         """Total play time in seconds."""
-        if self._nowplaying:
-            return int(self._nowplaying.duration)
+        return int(self._setstate.nowPlayingInfo.duration)
 
     @property
     def position(self):
         """Position in the playing media (seconds)."""
         # timestamp contains time of the latest "play" action, so it must be
         # used to calculate the correct time here: elapsed + (now - timestamp)
-        if self._nowplaying:
-            return int(self._nowplaying.elapsedTime)
+        return int(self._setstate.nowPlayingInfo.elapsedTime)
 
     @property
     def shuffle(self):
@@ -193,14 +192,25 @@ class MrpMetadata(Metadata):
     def __init__(self, protocol):
         """Initialize a new MrpPlaying."""
         self.protocol = protocol
-        self._playing = MrpPlaying(protocol)
+        self.protocol.add_listener(
+            self._handle_set_state, PB.ProtocolMessage.SET_STATE_MESSAGE)
+        self._setstate = None
+        self._metadata = None
+
+    @asyncio.coroutine
+    def _handle_set_state(self, message, data):
+        if message.type == PB.ProtocolMessage.SET_STATE_MESSAGE:
+            index = SetStateMessage.setStateMessage
+            self._setstate = message.Extensions[index]
 
     @asyncio.coroutine
     def playing(self):
         """Return what is currently playing."""
-        yield from self.protocol.send(messages.client_updates_config())
-        yield from asyncio.sleep(2)
-        return self._playing
+        # TODO: This is hack-ish
+        if self._setstate is None:
+            yield from self.protocol.start()
+
+        return MrpPlaying(self._setstate, self._metadata)
 
 
 class MrpPushUpdater(PushUpdater):
@@ -262,6 +272,8 @@ class MrpProtocol(object):
     It provides an API for sending and receiving messages.
     """
 
+    Listener = namedtuple('Listener', ['func', 'data'])
+
     def __init__(self, loop, connection, srp, service):
         """Initialize a new MrpProtocol."""
         self.loop = loop
@@ -270,14 +282,17 @@ class MrpProtocol(object):
         self.service = service
         self._outstanding = {}
         self._listeners = {}
+        self._one_shots = {}
         self._future = None
         self._initial_message_sent = False
 
-    def add_listener(self, listener, message_type):
-        if message_type not in self._listeners:
-            self._listeners[message_type] = []
+    def add_listener(self, listener, message_type, data=None, one_shot=False):
+        lst = self._one_shots if one_shot else self._listeners
 
-        self._listeners[message_type].append(listener)
+        if message_type not in lst:
+            lst[message_type] = []
+
+        lst[message_type].append(self.Listener(listener, data))
 
     @asyncio.coroutine
     def start(self):
@@ -303,8 +318,25 @@ class MrpProtocol(object):
         msg = messages.device_information(
             'pyatv', self.srp.pairing_id.decode())
         yield from self.send_and_receive(msg)
-
         self._initial_message_sent = True
+
+        # Wait for some stuff to arrive before returning
+        semaphore = asyncio.Semaphore(value=0, loop=self.loop)
+
+        @asyncio.coroutine
+        def _wait_for_updates(message, data):
+            # Use a counter here whenever more than one message is expected
+            semaphore.release()
+
+        self.add_listener(_wait_for_updates,
+                          PB.ProtocolMessage.SET_STATE_MESSAGE,
+                          one_shot=False)
+
+        # Subscribe to updates at this stage
+        yield from self.send(messages.client_updates_config())
+
+        yield from asyncio.wait_for(
+            semaphore.acquire(), 5, loop=self.loop)
 
     def stop(self):
         """Disconnect from device."""
@@ -419,9 +451,15 @@ class MrpProtocol(object):
     @asyncio.coroutine
     def _dispatch(self, message):
         for listener in self._listeners.get(message.type, []):
-            _LOGGER.debug('Dispatching message %d to %s',
-                          message.type, listener.__class__)
-            yield from listener.handle_message(message)
+            _LOGGER.debug('Dispatching message with type %d', message.type)
+            yield from listener.func(message, listener.data)
+
+        if message.type in self._one_shots:
+            for one_shot in self._one_shots.get(message.type,):
+                _LOGGER.debug('One-shot with message type %d', message.type)
+                yield from one_shot.func(message, one_shot.data)
+
+            del self._one_shots[message.type]
 
 
 class MrpAppleTV(AppleTV):
@@ -452,8 +490,7 @@ class MrpAppleTV(AppleTV):
     @asyncio.coroutine
     def login(self):
         """Perform an explicit login."""
-        # TODO: should not be here
-        yield from self._protocol.send(messages.client_updates_config())
+        yield from self._protocol.start()
 
     @asyncio.coroutine
     def logout(self):
