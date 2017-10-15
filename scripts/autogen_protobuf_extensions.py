@@ -22,10 +22,10 @@ THIS CODE IS AUTO-GENERATED - DO NOT EDIT!!!
 from pyatv.mrp.protobuf.ProtocolMessage_pb2 import ProtocolMessage
 
 
-{package_imports}
+{packages}
 
 
-{message_imports}
+{messages}
 
 
 _EXTENSION_LOOKUP = {{
@@ -53,7 +53,6 @@ MessageInfo = namedtuple('MessageInfo',
 
 def extract_message_info():
     """Get information about all messages of interest."""
-    lookup_table = {}
     base_path = BASE_PACKAGE.replace('.', '/')
     filename = os.path.join(base_path, 'ProtocolMessage.proto')
 
@@ -80,47 +79,38 @@ def extract_message_info():
             if not os.path.exists(os.path.join(base_path, title + '.proto')):
                 continue
 
-            lookup_table[constant] = MessageInfo(
+            yield MessageInfo(
                 title + '_pb2', title, accessor, constant)
-
-    return lookup_table
 
 
 def main():
     """Script starts somewhere around here."""
-    lookup_table = extract_message_info()
-
-    package_imports = []
-    message_imports = []
-    message_extensions = []
-    message_constants = []
+    packages = []
+    messages = []
+    extensions = []
+    constants = []
 
     # Extract everything needed to generate output file
-    for message in lookup_table.values():
-        package_imports.append(
+    for info in extract_message_info():
+        packages.append(
             'from {0} import {1}'.format(
-                BASE_PACKAGE, message.module))
-
-    for message in lookup_table.values():
-        message_imports.append(
+                BASE_PACKAGE, info.module))
+        messages.append(
             'from {0}.{1} import {2}'.format(
-                BASE_PACKAGE, message.module, message.title))
-
-    for message in lookup_table.values():
-        message_extensions.append(
+                BASE_PACKAGE, info.module, info.title))
+        extensions.append(
             'ProtocolMessage.{0}: {1}.{2},'.format(
-                message.const, message.module, message.accessor))
-
-    for message in lookup_table.values():
-        message_constants.append(
-            '{0} = ProtocolMessage.{0}'.format(message.const))
+                info.const, info.module, info.accessor))
+        constants.append(
+            '{0} = ProtocolMessage.{0}'.format(
+                info.const))
 
     # Print file output with values inserted
     print(OUTPUT_TEMPLATE.format(
-        package_imports='\n'.join(package_imports),
-        message_imports='\n'.join(message_imports),
-        extensions='\n    '.join(message_extensions),
-        constants='\n'.join(message_constants)))
+        packages='\n'.join(packages),
+        messages='\n'.join(messages),
+        extensions='\n    '.join(extensions),
+        constants='\n'.join(constants)))
 
     return 0
 
