@@ -7,6 +7,7 @@ import datetime
 
 from collections import namedtuple
 
+from pyatv.mrp import protobuf
 from pyatv import (const, exceptions)
 from pyatv.mrp import messages
 from pyatv.mrp.srp import (Credentials, SRPAuthHandler)
@@ -15,7 +16,7 @@ from pyatv.mrp.pairing import (MrpPairingProcedure, MrpPairingVerifier)
 from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
 from pyatv.interface import (AppleTV, RemoteControl, Metadata,
                              Playing, PushUpdater, PairingHandler)
-from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -201,15 +202,14 @@ class MrpMetadata(Metadata):
         """Initialize a new MrpPlaying."""
         self.protocol = protocol
         self.protocol.add_listener(
-            self._handle_set_state, PB.ProtocolMessage.SET_STATE_MESSAGE)
+            self._handle_set_state, protobuf.SET_STATE_MESSAGE)
         self._setstate = None
         self._metadata = None  # TODO: data from TRANSACTION_MESSAGE
 
     @asyncio.coroutine
     def _handle_set_state(self, message, data):
-        if message.type == PB.ProtocolMessage.SET_STATE_MESSAGE:
-            index = SetStateMessage.setStateMessage
-            self._setstate = message.Extensions[index]
+        if message.type == protobuf.SET_STATE_MESSAGE:
+            self._setstate = message.inner()
 
     @asyncio.coroutine
     def playing(self):
@@ -220,7 +220,7 @@ class MrpMetadata(Metadata):
 
         # No SET_STATE_MESSAGE received yet, use default
         if self._setstate is None:
-            return MrpPlaying(SetStateMessage.SetStateMessage(), None)
+            return MrpPlaying(protobuf.SetStateMessage(), None)
 
         return MrpPlaying(self._setstate, self._metadata)
 
@@ -234,9 +234,9 @@ class MrpPushUpdater(PushUpdater):
         self.metadata = metadata
         self.protocol = protocol
         self.protocol.add_listener(
-            self._handle_update, PB.ProtocolMessage.SET_STATE_MESSAGE)
+            self._handle_update, protobuf.SET_STATE_MESSAGE)
         self.protocol.add_listener(
-            self._handle_update, PB.ProtocolMessage.TRANSACTION_MESSAGE)
+            self._handle_update, protobuf.TRANSACTION_MESSAGE)
         self._enabled = False
         self.__listener = None
 
@@ -397,15 +397,21 @@ class MrpProtocol(object):
             semaphore.release()
 
         self.add_listener(_wait_for_updates,
-                          PB.ProtocolMessage.SET_STATE_MESSAGE,
+                          protobuf.SET_STATE_MESSAGE,
                           one_shot=False)
 
         # Subscribe to updates at this stage
         yield from self.send(messages.client_updates_config())
         yield from self.send(messages.wake_device())
 
-        yield from asyncio.wait_for(
-            semaphore.acquire(), 1, loop=self.loop)
+        try:
+            yield from asyncio.wait_for(
+                semaphore.acquire(), 1, loop=self.loop)
+        except asyncio.TimeoutError:
+            # This is not an issue itself, but I should do something better.
+            # Basically this gives the device about one second to respond with
+            # some metadata before continuing.
+            pass
 
     def stop(self):
         """Disconnect from device."""

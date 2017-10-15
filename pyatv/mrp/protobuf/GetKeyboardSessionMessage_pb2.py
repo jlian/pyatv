@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='pyatv/mrp/protobuf/GetKeyboardSessionMessage.proto',
   package='',
   syntax='proto2',
-  serialized_pb=_b('\n2pyatv/mrp/protobuf/GetKeyboardSessionMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto:3\n\x19getKeyboardSessionMessage\x12\x10.ProtocolMessage\x18\x1d \x01(\t')
+  serialized_pb=_b('\n2pyatv/mrp/protobuf/GetKeyboardSessionMessage.proto\x1a(pyatv/mrp/protobuf/ProtocolMessage.proto\"\x1b\n\x19GetKeyboardSessionMessage:3\n\x19getKeyboardSessionMessage\x12\x10.ProtocolMessage\x18\x1d \x01(\t')
   ,
   dependencies=[pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.DESCRIPTOR,])
 
@@ -34,8 +34,40 @@ getKeyboardSessionMessage = _descriptor.FieldDescriptor(
   is_extension=True, extension_scope=None,
   options=None)
 
+
+_GETKEYBOARDSESSIONMESSAGE = _descriptor.Descriptor(
+  name='GetKeyboardSessionMessage',
+  full_name='GetKeyboardSessionMessage',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto2',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=96,
+  serialized_end=123,
+)
+
+DESCRIPTOR.message_types_by_name['GetKeyboardSessionMessage'] = _GETKEYBOARDSESSIONMESSAGE
 DESCRIPTOR.extensions_by_name['getKeyboardSessionMessage'] = getKeyboardSessionMessage
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+GetKeyboardSessionMessage = _reflection.GeneratedProtocolMessageType('GetKeyboardSessionMessage', (_message.Message,), dict(
+  DESCRIPTOR = _GETKEYBOARDSESSIONMESSAGE,
+  __module__ = 'pyatv.mrp.protobuf.GetKeyboardSessionMessage_pb2'
+  # @@protoc_insertion_point(class_scope:GetKeyboardSessionMessage)
+  ))
+_sym_db.RegisterMessage(GetKeyboardSessionMessage)
 
 pyatv_dot_mrp_dot_protobuf_dot_ProtocolMessage__pb2.ProtocolMessage.RegisterExtension(getKeyboardSessionMessage)
 

@@ -82,5 +82,6 @@ message ProtocolMessage {
 //  optional SetReadyStateMessage setReadyStateMessage = 41;
 //  optional SetConnectionStateMessage setConnectionStateMessage = 42;
 //  optional SetHiliteModeMessage setHiliteModeMessage = 44;
+//  optional WakeDeviceMessage wakeDeviceMessage = 45;
 //  optional SendPackedVirtualTouchEventMessage sendPackedVirtualTouchEventMessage = 47;
 }

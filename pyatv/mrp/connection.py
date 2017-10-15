@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 from pyatv.mrp import chacha20
-from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB
+from pyatv.mrp import protobuf
 from pyatv.mrp.variant import (read_variant, write_variant)
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class MrpConnection:
             data = self._chacha.decrypt(data)
             _log_debug('<< Receive', Decrypted=data)
 
-        parsed = PB.ProtocolMessage()
+        parsed = protobuf.ProtocolMessage()
         parsed.ParseFromString(data)
         _LOGGER.debug('<< Receive: Protobuf=%s', parsed)
         return parsed

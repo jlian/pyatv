@@ -2,33 +2,13 @@
 
 import binascii
 
+from pyatv.mrp import protobuf
 from pyatv.mrp import tlv8
-
-# Import all supported messages here, otherwise they will not be decoded
-# properly when printing them in the debug messages
-from pyatv.mrp.protobuf import NotificationMessage_pb2  # noqa
-from pyatv.mrp.protobuf import ClientUpdatesConfigMessage_pb2 as ClientUpdates
-from pyatv.mrp.protobuf import ProtocolMessage_pb2 as PB  # noqa
-from pyatv.mrp.protobuf import DeviceInfoMessage_pb2 as DeviceInfoMessage
-from pyatv.mrp.protobuf import CryptoPairingMessage_pb2 as CryptoPairingMessage
-from pyatv.mrp.protobuf import SetStateMessage_pb2 as SetStateMessage
-from pyatv.mrp.protobuf import TransactionMessage_pb2 as TransactionMessage
-from pyatv.mrp.protobuf import VolumeControlAvailability_pb2 as VolumeControlAvailabilityMessage  # noqa
-from pyatv.mrp.protobuf import SetArtworkMessage_pb2 as SetArtworkMessage
-from pyatv.mrp.protobuf import SendPackedVirtualTouchEventMessage_pb2 as SendPackedVirtualTouchEventMessage  # noqa
-from pyatv.mrp.protobuf import RegisterHIDDeviceMessage_pb2 as RegisterHIDDeviceMessage
-from pyatv.mrp.protobuf import RegisterHIDDeviceResultMessage_pb2 as RegisterHIDDeviceResultMessage
-from pyatv.mrp.protobuf import SendHIDEventMessage_pb2 as SendHIDEventMessage
-from pyatv.mrp.protobuf import SetConnectionState_pb2 as SetConnectionState
-from pyatv.mrp.protobuf import RegisterForGameControllerEventsMessage_pb2 as RegisterForGameControllerEventsMessage
-from pyatv.mrp.protobuf import SetHiliteModeMessage_pb2 as SetHiliteModeMessage
-from pyatv.mrp.protobuf import RegisterVoiceInputDeviceMessage_pb2 as RegisterVoiceInputDeviceMessage
-from pyatv.mrp.protobuf import RegisterVoiceInputDeviceResponseMessage_pb2 as RegisterVoiceInputDeviceResponseMessage
 
 
 def create(message_type, priority=0):
     """Create a ProtocolMessage."""
-    message = PB.ProtocolMessage()
+    message = protobuf.ProtocolMessage()
     message.type = message_type
     message.priority = priority
     return message
@@ -38,9 +18,8 @@ def create(message_type, priority=0):
 def device_information(name, identifier):
     """Create a new DEVICE_INFO_MESSAGE."""
     # pylint: disable=no-member
-    message = create(PB.ProtocolMessage.DEVICE_INFO_MESSAGE)
-    # pylint: disable=no-member
-    info = message.Extensions[DeviceInfoMessage.deviceInfoMessage]
+    message = create(protobuf.DEVICE_INFO_MESSAGE)
+    info = message.inner()
     info.uniqueIdentifier = identifier
     info.name = name
     info.localizedModelName = 'iPhone'
@@ -53,18 +32,16 @@ def device_information(name, identifier):
 
 def set_connection_state():
     """Create a new SET_CONNECTION_STATE_MESSAGE."""
-    message = create(PB.ProtocolMessage.SET_CONNECTION_STATE_MESSAGE)
-    connection = message.Extensions[SetConnectionState.setConnectionStateMessage]
-    connection.state = SetConnectionState.SetConnectionStateMessage.Connected
+    message = create(protobuf.SET_CONNECTION_STATE_MESSAGE)
+    connection = message.inner()
+    connection.state = protobuf.SetConnectionStateMessage.Connected
     return message
 
 
 def crypto_pairing(pairing_data):
     """Create a new CRYPTO_PAIRING_MESSAGE."""
-    # pylint: disable=no-member
-    message = create(PB.ProtocolMessage.CRYPTO_PAIRING_MESSAGE)
-    # pylint: disable=no-member
-    crypto = message.Extensions[CryptoPairingMessage.cryptoPairingMessage]
+    message = create(protobuf.CRYPTO_PAIRING_MESSAGE)
+    crypto = message.inner()
     crypto.status = 0
     crypto.pairingData = tlv8.write_tlv(pairing_data)
     return message
@@ -73,8 +50,8 @@ def crypto_pairing(pairing_data):
 def client_updates_config(artwork=True, now_playing=True,
                           volume=True, keyboard=True):
     """Create a new CLIENT_UPDATES_CONFIG_MESSAGE."""
-    message = create(PB.ProtocolMessage.CLIENT_UPDATES_CONFIG_MESSAGE)
-    config = message.Extensions[ClientUpdates.clientUpdatesConfigMessage]
+    message = create(protobuf.CLIENT_UPDATES_CONFIG_MESSAGE)
+    config = message.inner()
     config.artworkUpdates = artwork
     config.nowPlayingUpdates = now_playing
     config.volumeUpdates = volume
@@ -83,14 +60,13 @@ def client_updates_config(artwork=True, now_playing=True,
 
 def wake_device():
     """Create a new WAKE_DEVICE_MESSAGE."""
-    return create(PB.ProtocolMessage.WAKE_DEVICE_MESSAGE)
+    return create(protobuf.WAKE_DEVICE_MESSAGE)
 
 def register_hid_device(screen_width, screen_height,
                         absolute=False, integrated_display=False):
     """Create a new REGISTER_HID_DEVICE_MESSAGE."""
-    message = create(PB.ProtocolMessage.REGISTER_HID_DEVICE_MESSAGE)
-    ext = RegisterHIDDeviceMessage.registerHIDDeviceMessage
-    descriptor = message.Extensions[ext].deviceDescriptor
+    message = create(protobuf.REGISTER_HID_DEVICE_MESSAGE)
+    descriptor = message.inner().deviceDescriptor
     descriptor.absolute = 1 if absolute else 0
     descriptor.integratedDisplay = 1 if integrated_display else 0
     descriptor.screenSizeWidth = screen_width
@@ -99,9 +75,8 @@ def register_hid_device(screen_width, screen_height,
 
 def send_packed_virtual_touch_event(x, y, phase, deviceID, finger):
     """Create a new WAKE_DEVICE_MESSAGE."""
-    message = create(PB.ProtocolMessage.SEND_PACKED_VIRTUAL_TOUCH_EVENT_MESSAGE)
-    ext = SendPackedVirtualTouchEventMessage.sendPackedVirtualTouchEventMessage
-    event = message.Extensions[ext]
+    message = create(protobuf.SEND_PACKED_VIRTUAL_TOUCH_EVENT_MESSAGE)
+    event = message.inner()
 
     # The packed version of VirtualTouchEvent contains X, Y, phase, deviceID
     # and finger stored as a byte array. Each value is written as 16bit little
@@ -116,9 +91,8 @@ def send_packed_virtual_touch_event(x, y, phase, deviceID, finger):
 
 def send_hid_event(use_page, usage, down):
     """Create a new SEND_HID_EVENT_MESSAGE."""
-    message = create(PB.ProtocolMessage.SEND_HID_EVENT_MESSAGE)
-    ext = SendHIDEventMessage.sendHIDEventMessage
-    event = message.Extensions[ext]
+    message = create(protobuf.SEND_HID_EVENT_MESSAGE)
+    event = message.inner()
 
     # TODO: This should be generated somehow. I guess it's mach AbsoluteTime
     # which is tricky to generate. The device does not seem to care much about
